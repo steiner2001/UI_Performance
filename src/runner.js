@@ -167,7 +167,6 @@ function updateChart(canvas, impls) {
         data: {
             labels: impls.map(toLabel),
             datasets: [{
-                label: 'ms',
                 data: impls.map(function(impl) { return trunc(impl.time); }),
                 backgroundColor: impls.map(toColor),
                 borderColor: impls.map(toColorBorder),
@@ -192,9 +191,9 @@ function updateChart(canvas, impls) {
                     barPercentage: 0.6,
                     ticks: {
                         autoSkip: false,
-                        maxRotation: 90,
-                        minRotation: 90,
-                        fontSize: 10,
+                        //maxRotation: 90,
+                        //minRotation: 90,
+                        fontSize: 16,
                         fontColor: "Black",
                         defaultFontFamily: "Arial, Helvetica, sans-serif"
 
@@ -230,9 +229,9 @@ function updateChart(canvas, impls) {
                             ctx.textBaseline = 'middle';
                             ctx.fillStyle = dataset.type == "line" ? "black" : "black";
                             ctx.save();
-                            ctx.translate(model.x, textY - 15);
-                            ctx.rotate(4.7);
-                            ctx.fillText(dataset.data[i], 0, 0);
+                            ctx.translate(model.x - 20, textY - 30);
+                            //ctx.rotate(4.7);
+                            ctx.fillText((dataset.data[i] + ' ms'), 0, 0);
                             ctx.restore();
                         }
                     }

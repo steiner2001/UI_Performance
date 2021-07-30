@@ -44,7 +44,7 @@ function runImplementations(impls, suite, index, done) {
                 impl.time = getTotalTime(results);
                 console.log(
                     impl.name + ' ' + impl.version +
-                    (impl.optimized ? ' (optimized)' : '') +
+                    (impl.optimized ? '' : '') +
                     ' = ' + trunc(impl.time) + ' ms'
                 );
 
@@ -171,32 +171,76 @@ function updateChart(canvas, impls) {
                 data: impls.map(function(impl) { return trunc(impl.time); }),
                 backgroundColor: impls.map(toColor),
                 borderColor: impls.map(toColorBorder),
-                borderWidth: 3
+                borderWidth: 5
             }]
         },
         options: {
-            defaultFontFamily: 'Source Sans Pro',
             title: {
-                display: true,
-                text: 'Benchmark Results',
-                fontSize: 20
+                display: true
             },
             legend: {
                 display: false
             },
+            tooltips: {
+                enabled: false
+            },
             scales: {
-                yAxes: [{
-                    scaleLabel: {
-                        display: true,
-                        labelString: 'Milliseconds (lower is better)',
-                        fontSize: 16
+                xAxes: [{
+                    gridLines: {
+                        color: "rgba(0, 0, 0, 0)",
                     },
+                    barPercentage: 0.6,
                     ticks: {
-                        beginAtZero: true
+                        autoSkip: false,
+                        maxRotation: 90,
+                        minRotation: 90,
+                        fontSize: 10,
+                        fontColor: "Black",
+                        defaultFontFamily: "Arial, Helvetica, sans-serif"
+
                     }
+                }],
+                yAxes: [{
+
+                    ticks: {
+
+                        beginAtZero: true,
+                        fontSize: 12,
+                        fontColor: "Black",
+                        defaultFontFamily: "Arial, Helvetica, sans-serif",
+
+
+
+                    }
+
                 }]
             }
+        },
+        plugins: {
+            afterDatasetsDraw: function(context, easing) {
+                var ctx = context.chart.ctx;
+                context.data.datasets.forEach(function(dataset) {
+                    for (var i = 0; i < dataset.data.length; i++) {
+                        if (dataset.data[i] != 0) {
+                            var model = dataset._meta[Object.keys(dataset._meta)[0]].data[i]._model;
+                            var textY = model.y + (dataset.type == "line" ? -3 : 15);
+
+                            ctx.font = Chart.helpers.fontString(Chart.defaults.global.defaultFontSize, 'normal', Chart.defaults.global.defaultFontFamily);
+                            ctx.textAlign = 'start';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillStyle = dataset.type == "line" ? "black" : "black";
+                            ctx.save();
+                            ctx.translate(model.x, textY - 15);
+                            ctx.rotate(4.7);
+                            ctx.fillText(dataset.data[i], 0, 0);
+                            ctx.restore();
+                        }
+                    }
+                });
+            }
+
         }
+
     });
 }
 
@@ -206,12 +250,12 @@ function toLabel(impl) {
 
 function toColor(impl) {
     return impl.optimized ?
-        'rgba(219, 84, 0, 0.4)' :
-        'rgba(135, 219, 0, 0.4)';
+        'rgba(75, 192, 192, 0.2)' :
+        'rgba(54, 162, 235, 0.2)';
 }
 
 function toColorBorder(impl) {
     return impl.optimized ?
-        'rgba(219, 84, 0, 1)' :
-        'rgba(135, 219, 0, 1)';
+        'rgba(75, 192, 192, 1)' :
+        'rgba(54, 162, 235, 1)';
 }

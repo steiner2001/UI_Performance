@@ -137,7 +137,7 @@ viewEntry running { id, selected, impl } =
     , span
         [ style [("color","#aaa")]
         ]
-        [ text (if impl.optimized then " (optimized)" else "")
+        [ text (if impl.optimized then "" else "")
         ]
     ]
 

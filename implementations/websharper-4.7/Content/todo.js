@@ -40,6 +40,26 @@
           return o;
         },
 
+      PrintObject:
+        function (obj) {
+          var res = obj.constructor.name + " { ";
+          var empty = true;
+          for (field in obj) {
+            if (empty) {
+              empty = false;
+            } else {
+              res += ", ";
+            }
+            res += field + " = " + obj[field];
+          }
+          if (empty) {
+            res += "}";
+          } else {
+            res += " }";
+          }
+          return res;
+        },
+
       DeleteEmptyFields:
         function (obj, fields) {
           for (var i = 0; i < fields.length; i++) {
@@ -719,13 +739,20 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
        o=v;
       }
      }),o]);
-     m[0]?(instantiated.Add(name$2),rawTpls.Remove(name$2),Templates.PrepareTemplateStrict(baseName,{
-      $:1,
-      $0:name$2
-     },m[1],{
-      $:1,
-      $0:prepareTemplate
-     })):console.warn(instantiated.Contains(name$2)?"Encountered loop when instantiating "+name$2:"Local template does not exist: "+name$2);
+     if(m[0])
+      {
+       instantiated.Add(name$2);
+       rawTpls.Remove(name$2);
+       Templates.PrepareTemplateStrict(baseName,{
+        $:1,
+        $0:name$2
+       },m[1],{
+        $:1,
+        $0:prepareTemplate
+       });
+      }
+     else
+      console.warn(instantiated.Contains(name$2)?"Encountered loop when instantiating "+name$2:"Local template does not exist: "+name$2);
     }
   }
   loadedTpls=Templates.LoadedTemplateFile(baseName);
@@ -773,7 +800,14 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
   var m,m$1,n,fakeroot;
   el.removeAttribute("ws-template");
   m=el.getAttribute("ws-replace");
-  m===null?void 0:(el.removeAttribute("ws-replace"),m$1=el.parentNode,Unchecked.Equals(m$1,null)?void 0:(n=self.document.createElement(el.tagName),n.setAttribute("ws-replace",m),m$1.replaceChild(n,el)));
+  if(m===null)
+   ;
+  else
+   {
+    el.removeAttribute("ws-replace");
+    m$1=el.parentNode;
+    Unchecked.Equals(m$1,null)?void 0:(n=self.document.createElement(el.tagName),n.setAttribute("ws-replace",m),m$1.replaceChild(n,el));
+   }
   fakeroot=self.document.createElement("div");
   fakeroot.appendChild(el);
   return fakeroot;
@@ -845,11 +879,13 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
           for(i=0,$3=attrs.length-1;i<=$3;i++){
            name$3=attrs.item(i).name.toLowerCase();
            mappings.set_Item(name$3,(m$1=attrs.item(i).nodeValue,m$1===""?name$3:m$1.toLowerCase()));
-           !usedHoles.Add(name$3)?console.warn("Hole mapped twice",name$3):void 0;
+           if(!usedHoles.Add(name$3))
+            console.warn("Hole mapped twice",name$3);
           }
           for(i$1=0,$4=$1.childNodes.length-1;i$1<=$4;i$1++){
            n=$1.childNodes[i$1];
-           Unchecked.Equals(n.nodeType,Node.ELEMENT_NODE)?!usedHoles.Add(n.nodeName.toLowerCase())?console.warn("Hole filled twice",instName):void 0:void 0;
+           if(Unchecked.Equals(n.nodeType,Node.ELEMENT_NODE))
+            !usedHoles.Add(n.nodeName.toLowerCase())?console.warn("Hole filled twice",instName):void 0;
           }
           singleTextFill=$1.childNodes.length===1&&Unchecked.Equals($1.firstChild.nodeType,Node.TEXT_NODE);
           if(singleTextFill)
@@ -878,7 +914,8 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
            {
             for(i$2=0,$5=$1.childNodes.length-1;i$2<=$5;i$2++){
              n$1=$1.childNodes[i$2];
-             Unchecked.Equals(n$1.nodeType,Node.ELEMENT_NODE)?n$1.hasAttributes()?Prepare.fillInstanceAttrs(instance,n$1):fillDocHole(instance,n$1):void 0;
+             if(Unchecked.Equals(n$1.nodeType,Node.ELEMENT_NODE))
+              n$1.hasAttributes()?Prepare.fillInstanceAttrs(instance,n$1):fillDocHole(instance,n$1);
             }
            }
           Prepare.mapHoles(instance,mappings);
@@ -986,7 +1023,11 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
   }
   name$1=(name==null?"":name.$0).toLowerCase();
   Templates.LoadedTemplateFile(baseName).set_Item(name$1,fakeroot);
-  fakeroot.hasChildNodes()?(convertNestedTemplates(fakeroot),convertNodeAndSiblings(fakeroot.firstChild)):void 0;
+  if(fakeroot.hasChildNodes())
+   {
+    convertNestedTemplates(fakeroot);
+    convertNodeAndSiblings(fakeroot.firstChild);
+   }
  };
  Templates.foreachNotPreserved=function(root,selector,f)
  {
@@ -1139,19 +1180,36 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
    while(p.hasChildNodes())
     p.removeChild(p.lastChild);
    m=tryGetAsDoc(name);
-   m!=null&&m.$==1?(doc=m.$0,Docs.LinkElement(p,doc.docNode),holes.push(DocElemNode.New(Attrs.Empty(p),doc.docNode,null,p,Fresh.Int(),null)),updates.push(doc.updates)):void 0;
+   if(m!=null&&m.$==1)
+    {
+     doc=m.$0;
+     Docs.LinkElement(p,doc.docNode);
+     holes.push(DocElemNode.New(Attrs.Empty(p),doc.docNode,null,p,Fresh.Int(),null));
+     updates.push(doc.updates);
+    }
   });
   Templates.foreachNotPreserved(el,"[ws-replace]",function(e$1)
   {
    var m,doc,p,after,before,o;
    m=tryGetAsDoc(e$1.getAttribute("ws-replace"));
-   m!=null&&m.$==1?(doc=m.$0,p=e$1.parentNode,after=self.document.createTextNode(""),p.replaceChild(after,e$1),before=Docs.InsertBeforeDelim(after,doc.docNode),o=Arrays.tryFindIndex(function(y)
-   {
-    return e$1===y;
-   },els),o==null?void 0:Arrays.set(els,o.$0,doc.docNode),holes.push(DocElemNode.New(Attrs.Empty(p),doc.docNode,{
-    $:1,
-    $0:[before,after]
-   },p,Fresh.Int(),null)),updates.push(doc.updates)):void 0;
+   if(m!=null&&m.$==1)
+    {
+     doc=m.$0;
+     p=e$1.parentNode;
+     after=self.document.createTextNode("");
+     p.replaceChild(after,e$1);
+     before=Docs.InsertBeforeDelim(after,doc.docNode);
+     o=Arrays.tryFindIndex(function(y)
+     {
+      return e$1===y;
+     },els);
+     o==null?void 0:Arrays.set(els,o.$0,doc.docNode);
+     holes.push(DocElemNode.New(Attrs.Empty(p),doc.docNode,{
+      $:1,
+      $0:[before,after]
+     },p,Fresh.Int(),null));
+     updates.push(doc.updates);
+    }
   });
   Templates.foreachNotPreserved(el,"[ws-attr]",function(e$1)
   {
@@ -1168,7 +1226,8 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
      o=v;
     }
    }),o]);
-   m[0]?m[1].$==3?addAttr(e$1,m[1].$1):console.warn("Attribute hole filled with non-attribute data",name):void 0;
+   if(m[0])
+    m[1].$==3?addAttr(e$1,m[1].$1):console.warn("Attribute hole filled with non-attribute data",name);
   });
   Templates.foreachNotPreserved(el,"[ws-on]",function(e$1)
   {
@@ -1210,7 +1269,8 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
      o=v;
     }
    }),o]);
-   m[0]?m[1].$==6?(e$1.removeAttribute("ws-onafterrender"),addAttr(e$1,AttrModule.OnAfterRender(m[1].$1))):m[1].$==7?(e$1.removeAttribute("ws-onafterrender"),addAttr(e$1,AttrModule.OnAfterRender(m[1].$1))):console.warn("onafterrender hole filled with non-onafterrender data",name):void 0;
+   if(m[0])
+    m[1].$==6?(e$1.removeAttribute("ws-onafterrender"),addAttr(e$1,AttrModule.OnAfterRender(m[1].$1))):m[1].$==7?(e$1.removeAttribute("ws-onafterrender"),addAttr(e$1,AttrModule.OnAfterRender(m[1].$1))):console.warn("onafterrender hole filled with non-onafterrender data",name);
   });
   Templates.foreachNotPreserved(el,"[ws-var]",function(e$1)
   {
@@ -1227,7 +1287,8 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
      o=v;
     }
    }),o]);
-   m[0]?m[1].$==8?addAttr(e$1,AttrModule.Value(m[1].$1)):m[1].$==9?addAttr(e$1,AttrModule.Checked(m[1].$1)):m[1].$==10?addAttr(e$1,AttrModule.IntValue(m[1].$1)):m[1].$==11?addAttr(e$1,AttrModule.IntValueUnchecked(m[1].$1)):m[1].$==12?addAttr(e$1,AttrModule.FloatValue(m[1].$1)):m[1].$==13?addAttr(e$1,AttrModule.FloatValueUnchecked(m[1].$1)):console.warn("Var hole filled with non-Var data",name):void 0;
+   if(m[0])
+    m[1].$==8?addAttr(e$1,AttrModule.Value(m[1].$1)):m[1].$==9?addAttr(e$1,AttrModule.Checked(m[1].$1)):m[1].$==10?addAttr(e$1,AttrModule.IntValue(m[1].$1)):m[1].$==11?addAttr(e$1,AttrModule.IntValueUnchecked(m[1].$1)):m[1].$==12?addAttr(e$1,AttrModule.FloatValue(m[1].$1)):m[1].$==13?addAttr(e$1,AttrModule.FloatValueUnchecked(m[1].$1)):console.warn("Var hole filled with non-Var data",name);
   });
   Templates.foreachNotPreserved(el,"[ws-attr-holes]",function(e$1)
   {
@@ -1388,7 +1449,10 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
  {
   var m;
   m=self.document.getElementById(id);
-  Unchecked.Equals(m,null)?Operators.FailWith("invalid id: "+id):Doc.Run(m,tr);
+  if(Unchecked.Equals(m,null))
+   Operators.FailWith("invalid id: "+id);
+  else
+   Doc.Run(m,tr);
  };
  Doc.Run=function(parent,doc)
  {
@@ -1548,7 +1612,11 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
    {
     var text;
     text=Strings.Trim(todoVar.Get());
-    text!==""?(model.Append(Client.mkTodo(text)),Var$1.Set(todoVar,"")):void 0;
+    if(text!=="")
+     {
+      model.Append(Client.mkTodo(text));
+      Var$1.Set(todoVar,"");
+     }
    });
   }
   function selected(e)
@@ -1716,19 +1784,28 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
    $this=this;
    h=this.hash(k);
    d=this.data[h];
-   d==null?(this.count=this.count+1,this.data[h]=new Global.Array({
-    K:k,
-    V:v
-   })):(m=Arrays.tryFindIndex(function(a)
-   {
-    return $this.equals.apply(null,[(Operators.KeyValue(a))[0],k]);
-   },d),m==null?(this.count=this.count+1,d.push({
-    K:k,
-    V:v
-   })):d[m.$0]={
-    K:k,
-    V:v
-   });
+   if(d==null)
+    {
+     this.count=this.count+1;
+     this.data[h]=new Global.Array({
+      K:k,
+      V:v
+     });
+    }
+   else
+    {
+     m=Arrays.tryFindIndex(function(a)
+     {
+      return $this.equals.apply(null,[(Operators.KeyValue(a))[0],k]);
+     },d);
+     m==null?(this.count=this.count+1,d.push({
+      K:k,
+      V:v
+     })):d[m.$0]={
+      K:k,
+      V:v
+     };
+    }
   },
   remove:function(k)
   {
@@ -1815,37 +1892,40 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
     m=typeof a;
     if(m=="object")
     {
-     if(a===null||a===void 0||b===null||b===void 0)
+     if(a===null||a===void 0||b===null||b===void 0||!Unchecked.Equals(typeof b,"object"))
       return false;
      else
       if("Equals"in a)
        return a.Equals(b);
       else
-       if(a instanceof Global.Array&&b instanceof Global.Array)
-        return Unchecked.arrayEquals(a,b);
+       if("Equals"in b)
+        return false;
        else
-        if(a instanceof Global.Date&&b instanceof Global.Date)
-         return Unchecked.dateEquals(a,b);
+        if(a instanceof Global.Array&&b instanceof Global.Array)
+         return Unchecked.arrayEquals(a,b);
         else
-         {
-          eqR=[true];
-          for(var k$2 in a)if(function(k$3)
+         if(a instanceof Global.Date&&b instanceof Global.Date)
+          return Unchecked.dateEquals(a,b);
+         else
           {
-           eqR[0]=!a.hasOwnProperty(k$3)||b.hasOwnProperty(k$3)&&Unchecked.Equals(a[k$3],b[k$3]);
-           return!eqR[0];
-          }(k$2))
-           break;
-          if(eqR[0])
+           eqR=[true];
+           for(var k$2 in a)if(function(k$3)
            {
-            for(var k$3 in b)if(function(k$4)
+            eqR[0]=!a.hasOwnProperty(k$3)||b.hasOwnProperty(k$3)&&Unchecked.Equals(a[k$3],b[k$3]);
+            return!eqR[0];
+           }(k$2))
+            break;
+           if(eqR[0])
             {
-             eqR[0]=!b.hasOwnProperty(k$4)||a.hasOwnProperty(k$4);
-             return!eqR[0];
-            }(k$3))
-             break;
-           }
-          return eqR[0];
-         }
+             for(var k$3 in b)if(function(k$4)
+             {
+              eqR[0]=!b.hasOwnProperty(k$4)||a.hasOwnProperty(k$4);
+              return!eqR[0];
+             }(k$3))
+              break;
+            }
+           return eqR[0];
+          }
     }
     else
      return m=="function"&&("$Func"in a?a.$Func===b.$Func&&a.$Target===b.$Target:"$Invokes"in a&&"$Invokes"in b&&Unchecked.arrayEquals(a.$Invokes,b.$Invokes));
@@ -2078,9 +2158,12 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
         while(go)
          {
           r.$0=e.Current();
-          e.MoveNext()?r=(t=new T({
-           $:1
-          }),r.$1=t,t):go=false;
+          if(e.MoveNext())
+           r=(t=new T({
+            $:1
+           }),r.$1=t,t);
+          else
+           go=false;
          }
         r.$1=T.Empty;
         $1=res;
@@ -2500,21 +2583,21 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
   function c(name,ty)
   {
    var r;
-   return filledVars.Contains(name)?null:(r=ty===0?TemplateInitializer.GetOrAddHoleFor(key,name,function()
+   return filledVars.Contains(name)?null:(r=Unchecked.Equals(ty,0)?TemplateInitializer.GetOrAddHoleFor(key,name,function()
    {
     return{
      $:8,
      $0:name,
      $1:Var$1.Create$1("")
     };
-   }):ty===1?TemplateInitializer.GetOrAddHoleFor(key,name,function()
+   }):Unchecked.Equals(ty,1)?TemplateInitializer.GetOrAddHoleFor(key,name,function()
    {
     return{
      $:13,
      $0:name,
      $1:Var$1.Create$1(0)
     };
-   }):ty===2?TemplateInitializer.GetOrAddHoleFor(key,name,function()
+   }):Unchecked.Equals(ty,2)?TemplateInitializer.GetOrAddHoleFor(key,name,function()
    {
     return{
      $:9,
@@ -2766,7 +2849,8 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
    a=this["var"].Get();
    for(i=0,$1=a.length-1;i<=$1;i++){
     v=Arrays.get(a,i);
-    f(v)?this.ObsoleteKey(this.key(v)):void 0;
+    if(f(v))
+     this.ObsoleteKey(this.key(v));
    }
    this["var"].Set(this.storage.SRemoveIf(f,this["var"].Get()));
   },
@@ -2780,7 +2864,10 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
    {
     return Unchecked.Equals($this.key(it),t);
    },v);
-   m!=null&&m.$==1?this["var"].Set(this.storage.SSetAt(m.$0,item,v)):this["var"].Set(this.storage.SAppend(item,v));
+   if(m!=null&&m.$==1)
+    this["var"].Set(this.storage.SSetAt(m.$0,item,v));
+   else
+    this["var"].Set(this.storage.SAppend(item,v));
    this.ObsoleteKey(t);
   },
   RemoveByKey:function(key)
@@ -2814,7 +2901,11 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
      o=v;
     }
    }),o]);
-   m[0]?(Snap.Obsolete(m[1]),this.it.Remove(key)):void 0;
+   if(m[0])
+    {
+     Snap.Obsolete(m[1]);
+     this.it.Remove(key);
+    }
   },
   MapLens:function(f)
   {
@@ -2904,7 +2995,12 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
    {
     return Unchecked.Equals($this.key(it),key);
    },v);
-   m!=null&&m.$==1?(index=m.$0,m$1=fn(Arrays.get(v,index)),m$1!=null&&m$1.$==1?(this["var"].Set(this.storage.SSetAt(index,m$1.$0,v)),this.ObsoleteKey(key)):void 0):void 0;
+   if(m!=null&&m.$==1)
+    {
+     index=m.$0;
+     m$1=fn(Arrays.get(v,index));
+     m$1!=null&&m$1.$==1?(this["var"].Set(this.storage.SSetAt(index,m$1.$0,v)),this.ObsoleteKey(key)):void 0;
+    }
   },
   GetEnumerator:function()
   {
@@ -3004,7 +3100,8 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
    all=HashSetUtil.concat(this.data);
    for(i=0,$1=all.length-1;i<=$1;i++){
     item=all[i];
-    !other.Contains(item)?this.Remove(item):void 0;
+    if(!other.Contains(item))
+     this.Remove(item);
    }
   },
   Remove:function(item)
@@ -3177,7 +3274,8 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
     {
      var x$1;
      x$1=x.s;
-     !Unchecked.Equals(x$1,null)?x$1.Dispose():void 0;
+     if(!Unchecked.Equals(x$1,null))
+      x$1.Dispose();
     });
    }
   };
@@ -3291,7 +3389,8 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
    while(e.MoveNext())
     {
      x=e.Current();
-     Unchecked.Compare(x,m)===1?m=x:void 0;
+     if(Unchecked.Compare(x,m)===1)
+      m=x;
     }
    return m;
   }
@@ -3562,7 +3661,8 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
    return dirty(el$1.Children);
   }
   Attrs.Sync(el.El,el.Attr);
-  hasDirtyChildren(el)?Docs.DoSyncElement(el):void 0;
+  if(hasDirtyChildren(el))
+   Docs.DoSyncElement(el);
  };
  Docs.Sync=function(doc)
  {
@@ -3619,7 +3719,11 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
  {
   var m;
   m=Runtime$1.GetOptional(el.Render);
-  m!=null&&m.$==1?(m.$0(el.El),Runtime$1.SetOptional(el,"Render",null)):void 0;
+  if(m!=null&&m.$==1)
+   {
+    m.$0(el.El);
+    Runtime$1.SetOptional(el,"Render",null);
+   }
  };
  Docs.DoSyncElement=function(el)
  {
@@ -3764,9 +3868,13 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
   {
    var m$1,m$2;
    m$1=p.Method;
-   m$1!=null&&m$1.$==1?method=m$1:void 0;
+   if(m$1!=null&&m$1.$==1)
+    method=m$1;
    m$2=p.Body.f();
-   m$2===null?void 0:body=m$2;
+   if(m$2===null)
+    ;
+   else
+    body=m$2;
    queryArgs=Map.FoldBack(function(k,v,t)
    {
     return t.Add(k,v);
@@ -3837,7 +3945,8 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
   {
    var m;
    m=f(this.Get());
-   m!=null&&m.$==1?this.Set(m.$0):void 0;
+   if(m!=null&&m.$==1)
+    this.Set(m.$0);
   }
  },Var,ConcreteVar);
  ConcreteVar.New=Runtime$1.Ctor(function(isConst,initSnap,initValue)
@@ -3874,13 +3983,19 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
  {
   var m;
   m=snap.s;
-  m==null?obs():m!=null&&m.$==2?m.$1.push(obs):m!=null&&m.$==3?m.$1.push(obs):void 0;
+  if(m==null)
+   obs();
+  else
+   m!=null&&m.$==2?m.$1.push(obs):m!=null&&m.$==3?m.$1.push(obs):void 0;
  };
  Snap.When=function(snap,avail,obs)
  {
   var m;
   m=snap.s;
-  m==null?Snap.Obsolete(obs):m!=null&&m.$==2?(Snap.EnqueueSafe(m.$1,obs),avail(m.$0)):m!=null&&m.$==3?(m.$0.push(avail),Snap.EnqueueSafe(m.$1,obs)):avail(m.$0);
+  if(m==null)
+   Snap.Obsolete(obs);
+  else
+   m!=null&&m.$==2?(Snap.EnqueueSafe(m.$1,obs),avail(m.$0)):m!=null&&m.$==3?(m.$0.push(avail),Snap.EnqueueSafe(m.$1,obs)):avail(m.$0);
  };
  Snap.MarkDone=function(res,sn,v)
  {
@@ -3894,7 +4009,10 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
  {
   var m;
   m=snap.s;
-  m==null?obs():m!=null&&m.$==2?(m.$1.push(obs),avail(m.$0)):m!=null&&m.$==3?(m.$0.push(avail),m.$1.push(obs)):avail(m.$0);
+  if(m==null)
+   obs();
+  else
+   m!=null&&m.$==2?(m.$1.push(obs),avail(m.$0)):m!=null&&m.$==3?(m.$0.push(avail),m.$1.push(obs)):avail(m.$0);
  };
  Snap.Map2=function(fn,sn1,sn2)
  {
@@ -3906,7 +4024,8 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
     {
      $3=Snap.ValueAndForever(sn1);
      $4=Snap.ValueAndForever(sn2);
-     $3!=null&&$3.$==1?$4!=null&&$4.$==1?$3.$0[1]&&$4.$0[1]?Snap.MarkForever(res,fn($3.$0[0],$4.$0[0])):Snap.MarkReady(res,fn($3.$0[0],$4.$0[0])):void 0:void 0;
+     if($3!=null&&$3.$==1)
+      $4!=null&&$4.$==1?$3.$0[1]&&$4.$0[1]?Snap.MarkForever(res,fn($3.$0[0],$4.$0[0])):Snap.MarkReady(res,fn($3.$0[0],$4.$0[0])):void 0;
     }
   }
   $1=sn1.s;
@@ -3930,14 +4049,17 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
     Queue.Clear(q);
     for(i=0,$1=Arrays.length(qcopy)-1;i<=$1;i++){
      o=Arrays.get(qcopy,i);
-     typeof o=="object"?function(sn)
-     {
-      if(sn.s)
-       q.push(sn);
-     }(o):function(f)
-     {
-      q.push(f);
-     }(o);
+     if(typeof o=="object")
+      (function(sn)
+      {
+       if(sn.s)
+        q.push(sn);
+      }(o));
+     else
+      (function(f)
+      {
+       q.push(f);
+      }(o));
     }
    }
   else
@@ -4035,7 +4157,8 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
     {
      $3=Snap.ValueAndForever(sn1);
      $4=Snap.ValueAndForever(sn2);
-     $3!=null&&$3.$==1?$4!=null&&$4.$==1?$3.$0[1]&&$4.$0[1]?Snap.MarkForever(res,null):Snap.MarkReady(res,null):void 0:void 0;
+     if($3!=null&&$3.$==1)
+      $4!=null&&$4.$==1?$3.$0[1]&&$4.$0[1]?Snap.MarkForever(res,null):Snap.MarkReady(res,null):void 0;
     }
   }
   $1=sn1.s;
@@ -4070,7 +4193,10 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
  {
   var m;
   m=snap.s;
-  m==null?Snap.Obsolete(obs):m!=null&&m.$==2?Snap.EnqueueSafe(m.$1,obs):m!=null&&m.$==3?Snap.EnqueueSafe(m.$1,obs):void 0;
+  if(m==null)
+   Snap.Obsolete(obs);
+  else
+   m!=null&&m.$==2?Snap.EnqueueSafe(m.$1,obs):m!=null&&m.$==3?Snap.EnqueueSafe(m.$1,obs):void 0;
  };
  Snap.Map3=function(fn,sn1,sn2,sn3)
  {
@@ -4083,7 +4209,8 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
      $4=Snap.ValueAndForever(sn1);
      $5=Snap.ValueAndForever(sn2);
      $6=Snap.ValueAndForever(sn3);
-     $4!=null&&$4.$==1?$5!=null&&$5.$==1?$6!=null&&$6.$==1?$4.$0[1]&&$5.$0[1]&&$6.$0[1]?Snap.MarkForever(res,fn($4.$0[0],$5.$0[0],$6.$0[0])):Snap.MarkReady(res,fn($4.$0[0],$5.$0[0],$6.$0[0])):void 0:void 0:void 0;
+     if($4!=null&&$4.$==1)
+      $5!=null&&$5.$==1?$6!=null&&$6.$==1?$4.$0[1]&&$5.$0[1]&&$6.$0[1]?Snap.MarkForever(res,fn($4.$0[0],$5.$0[0],$6.$0[0])):Snap.MarkReady(res,fn($4.$0[0],$5.$0[0],$6.$0[0])):void 0:void 0;
     }
   }
   $1=sn1.s;
@@ -4112,12 +4239,15 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
       m=s.s;
       return m!=null&&m.$==0?m.$0:m!=null&&m.$==2?m.$0:Operators.FailWith("value not found by View.Sequence");
      },snaps$1);
-     Arrays.forall(function(a$1)
+     if(Arrays.forall(function(a$1)
      {
       var $1;
       $1=a$1.s;
       return $1!=null&&$1.$==0;
-     },snaps$1)?Snap.MarkForever(res,vs):Snap.MarkReady(res,vs);
+     },snaps$1))
+      Snap.MarkForever(res,vs);
+     else
+      Snap.MarkReady(res,vs);
     }
    else
     w[0]--;
@@ -4321,7 +4451,10 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
  {
   var c;
   c=DomUtility.getClass(element);
-  c===""?DomUtility.setClass(element,cl):!DomUtility.clsRE(cl).test(c)?DomUtility.setClass(element,c+" "+cl):void 0;
+  if(c==="")
+   DomUtility.setClass(element,cl);
+  else
+   !DomUtility.clsRE(cl).test(c)?DomUtility.setClass(element,c+" "+cl):void 0;
  };
  DomUtility.RemoveClass=function(element,cl)
  {
@@ -4549,7 +4682,8 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
   while(i<arr.length&&res==null)
    {
     m=f(arr[i]);
-    m!=null&&m.$==1?res=m:void 0;
+    if(m!=null&&m.$==1)
+     res=m;
     i=i+1;
    }
   return res;
@@ -4620,7 +4754,10 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
   q=[];
   for(i=0,$1=arr.length-1;i<=$1;i++){
    m=f(arr[i]);
-   m==null?void 0:q.push(m.$0);
+   if(m==null)
+    ;
+   else
+    q.push(m.$0);
   }
   return q;
  };
@@ -4700,7 +4837,10 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
  Arrays.init=function(size,f)
  {
   var r,i,$1;
-  size<0?Operators.FailWith("Negative size given."):null;
+  if(size<0)
+   Operators.FailWith("Negative size given.");
+  else
+   null;
   r=new Global.Array(size);
   for(i=0,$1=size-1;i<=$1;i++)r[i]=f(i);
   return r;
@@ -4818,7 +4958,10 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
     m.removeAttribute("ws-attr");
     for(i=0,$1=fillWith.attributes.length-1;i<=$1;i++){
      a=fillWith.attributes.item(i);
-     a.name==="class"&&m.hasAttribute("class")?m.setAttribute("class",m.getAttribute("class")+" "+a.nodeValue):m.setAttribute(a.name,a.nodeValue);
+     if(a.name==="class"&&m.hasAttribute("class"))
+      m.setAttribute("class",m.getAttribute("class")+" "+a.nodeValue);
+     else
+      m.setAttribute(a.name,a.nodeValue);
     }
    }
  };
@@ -4839,7 +4982,8 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
       o=v;
      }
     }),o]);
-    m[0]?e.setAttribute(attrName,m[1]):void 0;
+    if(m[0])
+     e.setAttribute(attrName,m[1]);
    });
   }
   run("ws-hole");
@@ -4899,7 +5043,10 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
   {
    var m;
    m=el.getAttribute(name);
-   m===null?void 0:el.setAttribute(name,m.toLowerCase());
+   if(m===null)
+    ;
+   else
+    el.setAttribute(name,m.toLowerCase());
   }
   attrs=el.attributes;
   toRemove=[];
@@ -4907,16 +5054,24 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
   holedAttrs=[];
   for(i=0,$1=attrs.length-1;i<=$1;i++){
    a=attrs.item(i);
-   Strings.StartsWith(a.nodeName,"ws-on")&&a.nodeName!=="ws-onafterrender"&&a.nodeName!=="ws-on"?(toRemove.push(a.nodeName),events.push(Slice.string(a.nodeName,{
-    $:1,
-    $0:"ws-on".length
-   },null)+":"+a.nodeValue.toLowerCase())):!Strings.StartsWith(a.nodeName,"ws-")&&(new Global.RegExp(Templates.TextHoleRE())).test(a.nodeValue)?(a.nodeValue=(_this=new Global.RegExp(Templates.TextHoleRE(),"g"),a.nodeValue.replace(_this,function($2,$3)
-   {
-    return"${"+$3.toLowerCase()+"}";
-   })),holedAttrs.push(a.nodeName)):void 0;
+   if(Strings.StartsWith(a.nodeName,"ws-on")&&a.nodeName!=="ws-onafterrender"&&a.nodeName!=="ws-on")
+    {
+     toRemove.push(a.nodeName);
+     events.push(Slice.string(a.nodeName,{
+      $:1,
+      $0:"ws-on".length
+     },null)+":"+a.nodeValue.toLowerCase());
+    }
+   else
+    !Strings.StartsWith(a.nodeName,"ws-")&&(new Global.RegExp(Templates.TextHoleRE())).test(a.nodeValue)?(a.nodeValue=(_this=new Global.RegExp(Templates.TextHoleRE(),"g"),a.nodeValue.replace(_this,function($2,$3)
+    {
+     return"${"+$3.toLowerCase()+"}";
+    })),holedAttrs.push(a.nodeName)):void 0;
   }
-  !(events.length==0)?el.setAttribute("ws-on",Strings.concat(" ",events)):void 0;
-  !(holedAttrs.length==0)?el.setAttribute("ws-attr-holes",Strings.concat(" ",holedAttrs)):void 0;
+  if(!(events.length==0))
+   el.setAttribute("ws-on",Strings.concat(" ",events));
+  if(!(holedAttrs.length==0))
+   el.setAttribute("ws-attr-holes",Strings.concat(" ",holedAttrs));
   lowercaseAttr("ws-hole");
   lowercaseAttr("ws-replace");
   lowercaseAttr("ws-attr");
@@ -4929,7 +5084,8 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
  };
  Slice.string=function(source,start,finish)
  {
-  return start==null?finish!=null&&finish.$==1?source.slice(0,finish.$0+1):"":finish==null?source.slice(start.$0):source.slice(start.$0,finish.$0+1);
+  var f,f$1;
+  return start==null?finish!=null&&finish.$==1?(f=finish.$0,f<0?"":source.slice(0,f+1)):"":finish==null?source.slice(start.$0):(f$1=finish.$0,f$1<0?"":source.slice(start.$0,f$1+1));
  };
  Enumerator.Get=function(x)
  {
@@ -5100,7 +5256,7 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
     {
      var m;
      m=st[0];
-     return m===1?(st[0]=0,Concurrency.Zero()):m===2?(st[0]=1,work()):Concurrency.Zero();
+     return Unchecked.Equals(m,1)?(st[0]=0,Concurrency.Zero()):Unchecked.Equals(m,2)?(st[0]=1,work()):Concurrency.Zero();
     });
    });
   }
@@ -5109,7 +5265,13 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
   {
    var m;
    m=st[0];
-   m===0?(st[0]=1,Concurrency.Start(work(),null)):m===1?st[0]=2:void 0;
+   if(Unchecked.Equals(m,0))
+    {
+     st[0]=1;
+     Concurrency.Start(work(),null);
+    }
+   else
+    Unchecked.Equals(m,1)?st[0]=2:void 0;
   };
  };
  FSharpMap=Collections.FSharpMap=Runtime$1.Class({
@@ -5275,10 +5437,13 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
     sn.s=null;
     for(i=0,$2=Arrays.length($1)-1;i<=$2;i++){
      o=Arrays.get($1,i);
-     typeof o=="object"?function(sn$1)
-     {
-      Snap.Obsolete(sn$1);
-     }(o):o();
+     if(typeof o=="object")
+      (function(sn$1)
+      {
+       Snap.Obsolete(sn$1);
+      }(o));
+     else
+      o();
     }
    }
  };
@@ -6385,7 +6550,10 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
    else
     {
      m=Unchecked.Compare(k,t$1.Node);
-     m===0?loop=false:m===1?(spine.unshift([true,t$1.Node,t$1.Left]),t$1=t$1.Right):(spine.unshift([false,t$1.Node,t$1.Right]),t$1=t$1.Left);
+     if(m===0)
+      loop=false;
+     else
+      m===1?(spine.unshift([true,t$1.Node,t$1.Left]),t$1=t$1.Right):(spine.unshift([false,t$1.Node,t$1.Right]),t$1=t$1.Left);
     }
   return[t$1,spine];
  };
@@ -6408,10 +6576,14 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
    var $this;
    $this=this;
    this.robin.push(action);
-   this.idle?(this.idle=false,Global.setTimeout(function()
-   {
-    $this.tick();
-   },0)):void 0;
+   if(this.idle)
+    {
+     this.idle=false;
+     Global.setTimeout(function()
+     {
+      $this.tick();
+     },0);
+    }
   },
   tick:function()
   {
@@ -6648,7 +6820,8 @@ if(!p.closest){p.closest=function(s){var e=this;while(e&&e.nodeType==1){if(e.mat
   var x,ok;
   x=+s;
   ok=x===x-x%1&&x>=min&&x<=max;
-  ok?r.set(x):void 0;
+  if(ok)
+   r.set(x);
   return ok;
  };
  ValueCollection=Collections.ValueCollection=Runtime$1.Class({

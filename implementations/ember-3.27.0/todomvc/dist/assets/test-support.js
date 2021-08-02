@@ -3,21 +3,34 @@
 (function() {
 /*!
  * @overview  Ember - JavaScript Application Framework
- * @copyright Copyright 2011-2018 Tilde Inc. and contributors
+ * @copyright Copyright 2011-2021 Tilde Inc. and contributors
  *            Portions Copyright 2006-2011 Strobe Inc.
  *            Portions Copyright 2008-2011 Apple Inc. All rights reserved.
  * @license   Licensed under MIT license
  *            See https://raw.github.com/emberjs/ember.js/master/LICENSE
- * @version   3.4.5
+ * @version   3.27.5
  */
+/* eslint-disable no-var */
 
-/*globals process */
-var enifed, requireModule, Ember;
+/* globals global globalThis self */
+var define, require;
 
-// Used in ember-environment/lib/global.js
-mainContext = this; // eslint-disable-line no-undef
+(function () {
+  var globalObj = typeof globalThis !== 'undefined' ? globalThis : typeof self !== 'undefined' ? self : typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : null;
 
-(function() {
+  if (globalObj === null) {
+    throw new Error('unable to locate global object');
+  }
+
+  if (typeof globalObj.define === 'function' && typeof globalObj.require === 'function') {
+    define = globalObj.define;
+    require = globalObj.require;
+    return;
+  }
+
+  var registry = Object.create(null);
+  var seen = Object.create(null);
+
   function missingModule(name, referrerName) {
     if (referrerName) {
       throw new Error('Could not find module ' + name + ' required by: ' + referrerName);
@@ -55,767 +68,829 @@ mainContext = this; // eslint-disable-line no-undef
       if (deps[i] === 'exports') {
         reified[i] = exports;
       } else if (deps[i] === 'require') {
-        reified[i] = requireModule;
+        reified[i] = require;
       } else {
-        reified[i] = internalRequire(deps[i], name);
+        reified[i] = require(deps[i], name);
       }
     }
 
     callback.apply(this, reified);
-
     return exports;
   }
 
-  var isNode =
-    typeof window === 'undefined' &&
-    typeof process !== 'undefined' &&
-    {}.toString.call(process) === '[object process]';
+  require = function (name) {
+    return internalRequire(name, null);
+  }; // eslint-disable-next-line no-unused-vars
 
-  if (!isNode) {
-    Ember = this.Ember = this.Ember || {};
-  }
 
-  if (typeof Ember === 'undefined') {
-    Ember = {};
-  }
-
-  if (typeof Ember.__loader === 'undefined') {
-    var registry = {};
-    var seen = {};
-
-    enifed = function(name, deps, callback) {
-      var value = {};
-
-      if (!callback) {
-        value.deps = [];
-        value.callback = deps;
-      } else {
-        value.deps = deps;
-        value.callback = callback;
-      }
-
-      registry[name] = value;
+  define = function (name, deps, callback) {
+    registry[name] = {
+      deps: deps,
+      callback: callback
     };
+  }; // setup `require` module
 
-    requireModule = function(name) {
-      return internalRequire(name, null);
-    };
 
-    // setup `require` module
-    requireModule['default'] = requireModule;
+  require['default'] = require;
 
-    requireModule.has = function registryHas(moduleName) {
-      return !!registry[moduleName] || !!registry[moduleName + '/index'];
-    };
+  require.has = function registryHas(moduleName) {
+    return Boolean(registry[moduleName]) || Boolean(registry[moduleName + '/index']);
+  };
 
-    requireModule._eak_seen = registry;
-
-    Ember.__loader = {
-      define: enifed,
-      require: requireModule,
-      registry: registry,
-    };
-  } else {
-    enifed = Ember.__loader.define;
-    requireModule = Ember.__loader.require;
-  }
+  require._eak_seen = require.entries = registry;
 })();
+define("@ember/debug/index", ["exports", "@ember/-internals/browser-environment", "@ember/error", "@ember/debug/lib/deprecate", "@ember/debug/lib/testing", "@ember/debug/lib/warn", "@ember/-internals/utils", "@ember/debug/lib/capture-render-tree"], function (_exports, _browserEnvironment, _error, _deprecate2, _testing, _warn2, _utils, _captureRenderTree) {
+  "use strict";
 
-enifed('@ember/debug/index', ['exports', '@ember/debug/lib/warn', '@ember/debug/lib/deprecate', '@ember/debug/lib/testing', '@ember/error', 'ember-browser-environment'], function (exports, _warn2, _deprecate2, _testing, _error, _emberBrowserEnvironment) {
-    'use strict';
+  Object.defineProperty(_exports, "__esModule", {
+    value: true
+  });
+  Object.defineProperty(_exports, "registerDeprecationHandler", {
+    enumerable: true,
+    get: function () {
+      return _deprecate2.registerHandler;
+    }
+  });
+  Object.defineProperty(_exports, "isTesting", {
+    enumerable: true,
+    get: function () {
+      return _testing.isTesting;
+    }
+  });
+  Object.defineProperty(_exports, "setTesting", {
+    enumerable: true,
+    get: function () {
+      return _testing.setTesting;
+    }
+  });
+  Object.defineProperty(_exports, "registerWarnHandler", {
+    enumerable: true,
+    get: function () {
+      return _warn2.registerHandler;
+    }
+  });
+  Object.defineProperty(_exports, "inspect", {
+    enumerable: true,
+    get: function () {
+      return _utils.inspect;
+    }
+  });
+  Object.defineProperty(_exports, "captureRenderTree", {
+    enumerable: true,
+    get: function () {
+      return _captureRenderTree.default;
+    }
+  });
+  _exports._warnIfUsingStrippedFeatureFlags = _exports.getDebugFunction = _exports.setDebugFunction = _exports.deprecateFunc = _exports.runInDebug = _exports.debugFreeze = _exports.debugSeal = _exports.deprecate = _exports.debug = _exports.warn = _exports.info = _exports.assert = void 0;
 
-    exports._warnIfUsingStrippedFeatureFlags = exports.getDebugFunction = exports.setDebugFunction = exports.deprecateFunc = exports.runInDebug = exports.debugFreeze = exports.debugSeal = exports.deprecate = exports.debug = exports.warn = exports.info = exports.assert = exports.setTesting = exports.isTesting = exports.registerDeprecationHandler = exports.registerWarnHandler = undefined;
-    Object.defineProperty(exports, 'registerWarnHandler', {
-        enumerable: true,
-        get: function () {
-            return _warn2.registerHandler;
-        }
-    });
-    Object.defineProperty(exports, 'registerDeprecationHandler', {
-        enumerable: true,
-        get: function () {
-            return _deprecate2.registerHandler;
-        }
-    });
-    Object.defineProperty(exports, 'isTesting', {
-        enumerable: true,
-        get: function () {
-            return _testing.isTesting;
-        }
-    });
-    Object.defineProperty(exports, 'setTesting', {
-        enumerable: true,
-        get: function () {
-            return _testing.setTesting;
-        }
-    });
+  // These are the default production build versions:
+  var noop = () => {};
 
-    // These are the default production build versions:
-    var noop = function () {};
-    var assert = noop;
-    var info = noop;
-    var warn = noop;
-    var debug = noop;
-    var deprecate = noop;
-    var debugSeal = noop;
-    var debugFreeze = noop;
-    var runInDebug = noop;
-    var setDebugFunction = noop;
-    var getDebugFunction = noop;
-    var deprecateFunc = function () {
-        return arguments[arguments.length - 1];
+  var assert = noop;
+  _exports.assert = assert;
+  var info = noop;
+  _exports.info = info;
+  var warn = noop;
+  _exports.warn = warn;
+  var debug = noop;
+  _exports.debug = debug;
+  var deprecate = noop;
+  _exports.deprecate = deprecate;
+  var debugSeal = noop;
+  _exports.debugSeal = debugSeal;
+  var debugFreeze = noop;
+  _exports.debugFreeze = debugFreeze;
+  var runInDebug = noop;
+  _exports.runInDebug = runInDebug;
+  var setDebugFunction = noop;
+  _exports.setDebugFunction = setDebugFunction;
+  var getDebugFunction = noop;
+  _exports.getDebugFunction = getDebugFunction;
+
+  var deprecateFunc = function () {
+    return arguments[arguments.length - 1];
+  };
+
+  _exports.deprecateFunc = deprecateFunc;
+
+  if (true
+  /* DEBUG */
+  ) {
+    _exports.setDebugFunction = setDebugFunction = function (type, callback) {
+      switch (type) {
+        case 'assert':
+          return _exports.assert = assert = callback;
+
+        case 'info':
+          return _exports.info = info = callback;
+
+        case 'warn':
+          return _exports.warn = warn = callback;
+
+        case 'debug':
+          return _exports.debug = debug = callback;
+
+        case 'deprecate':
+          return _exports.deprecate = deprecate = callback;
+
+        case 'debugSeal':
+          return _exports.debugSeal = debugSeal = callback;
+
+        case 'debugFreeze':
+          return _exports.debugFreeze = debugFreeze = callback;
+
+        case 'runInDebug':
+          return _exports.runInDebug = runInDebug = callback;
+
+        case 'deprecateFunc':
+          return _exports.deprecateFunc = deprecateFunc = callback;
+      }
     };
-    if (true) {
-        exports.setDebugFunction = setDebugFunction = function (type, callback) {
-            switch (type) {
-                case 'assert':
-                    return exports.assert = assert = callback;
-                case 'info':
-                    return exports.info = info = callback;
-                case 'warn':
-                    return exports.warn = warn = callback;
-                case 'debug':
-                    return exports.debug = debug = callback;
-                case 'deprecate':
-                    return exports.deprecate = deprecate = callback;
-                case 'debugSeal':
-                    return exports.debugSeal = debugSeal = callback;
-                case 'debugFreeze':
-                    return exports.debugFreeze = debugFreeze = callback;
-                case 'runInDebug':
-                    return exports.runInDebug = runInDebug = callback;
-                case 'deprecateFunc':
-                    return exports.deprecateFunc = deprecateFunc = callback;
-            }
-        };
-        exports.getDebugFunction = getDebugFunction = function (type) {
-            switch (type) {
-                case 'assert':
-                    return assert;
-                case 'info':
-                    return info;
-                case 'warn':
-                    return warn;
-                case 'debug':
-                    return debug;
-                case 'deprecate':
-                    return deprecate;
-                case 'debugSeal':
-                    return debugSeal;
-                case 'debugFreeze':
-                    return debugFreeze;
-                case 'runInDebug':
-                    return runInDebug;
-                case 'deprecateFunc':
-                    return deprecateFunc;
-            }
-        };
-    }
+
+    _exports.getDebugFunction = getDebugFunction = function (type) {
+      switch (type) {
+        case 'assert':
+          return assert;
+
+        case 'info':
+          return info;
+
+        case 'warn':
+          return warn;
+
+        case 'debug':
+          return debug;
+
+        case 'deprecate':
+          return deprecate;
+
+        case 'debugSeal':
+          return debugSeal;
+
+        case 'debugFreeze':
+          return debugFreeze;
+
+        case 'runInDebug':
+          return runInDebug;
+
+        case 'deprecateFunc':
+          return deprecateFunc;
+      }
+    };
+  }
+  /**
+  @module @ember/debug
+  */
+
+
+  if (true
+  /* DEBUG */
+  ) {
     /**
-    @module @ember/debug
+      Verify that a certain expectation is met, or throw a exception otherwise.
+         This is useful for communicating assumptions in the code to other human
+      readers as well as catching bugs that accidentally violates these
+      expectations.
+         Assertions are removed from production builds, so they can be freely added
+      for documentation and debugging purposes without worries of incuring any
+      performance penalty. However, because of that, they should not be used for
+      checks that could reasonably fail during normal usage. Furthermore, care
+      should be taken to avoid accidentally relying on side-effects produced from
+      evaluating the condition itself, since the code will not run in production.
+         ```javascript
+      import { assert } from '@ember/debug';
+         // Test for truthiness
+      assert('Must pass a string', typeof str === 'string');
+         // Fail unconditionally
+      assert('This code path should never be run');
+      ```
+         @method assert
+      @static
+      @for @ember/debug
+      @param {String} description Describes the expectation. This will become the
+        text of the Error thrown if the assertion fails.
+      @param {any} condition Must be truthy for the assertion to pass. If
+        falsy, an exception will be thrown.
+      @public
+      @since 1.0.0
     */
-    if (true) {
-        /**
-          Verify that a certain expectation is met, or throw a exception otherwise.
-             This is useful for communicating assumptions in the code to other human
-          readers as well as catching bugs that accidentally violates these
-          expectations.
-             Assertions are removed from production builds, so they can be freely added
-          for documentation and debugging purposes without worries of incuring any
-          performance penalty. However, because of that, they should not be used for
-          checks that could reasonably fail during normal usage. Furthermore, care
-          should be taken to avoid accidentally relying on side-effects produced from
-          evaluating the condition itself, since the code will not run in production.
-             ```javascript
-          import { assert } from '@ember/debug';
-             // Test for truthiness
-          assert('Must pass a string', typeof str === 'string');
-             // Fail unconditionally
-          assert('This code path should never be run');
-          ```
-             @method assert
-          @static
-          @for @ember/debug
-          @param {String} description Describes the expectation. This will become the
-            text of the Error thrown if the assertion fails.
-          @param {Boolean} condition Must be truthy for the assertion to pass. If
-            falsy, an exception will be thrown.
-          @public
-          @since 1.0.0
-        */
-        setDebugFunction('assert', function assert(desc, test) {
-            if (!test) {
-                throw new _error.default('Assertion Failed: ' + desc);
-            }
-        });
-        /**
-          Display a debug notice.
-             Calls to this function are removed from production builds, so they can be
-          freely added for documentation and debugging purposes without worries of
-          incuring any performance penalty.
-             ```javascript
-          import { debug } from '@ember/debug';
-             debug('I\'m a debug notice!');
-          ```
-             @method debug
-          @for @ember/debug
-          @static
-          @param {String} message A debug message to display.
-          @public
-        */
-        setDebugFunction('debug', function debug(message) {
-            /* eslint-disable no-console */
-            if (console.debug) {
-                console.debug('DEBUG: ' + message);
-            } else {
-                console.log('DEBUG: ' + message);
-            }
-            /* eslint-ensable no-console */
-        });
-        /**
-          Display an info notice.
-             Calls to this function are removed from production builds, so they can be
-          freely added for documentation and debugging purposes without worries of
-          incuring any performance penalty.
-             @method info
-          @private
-        */
-        setDebugFunction('info', function info() {
-            var _console;
+    setDebugFunction('assert', function assert(desc, test) {
+      if (!test) {
+        throw new _error.default(`Assertion Failed: ${desc}`);
+      }
+    });
+    /**
+      Display a debug notice.
+         Calls to this function are not invoked in production builds.
+         ```javascript
+      import { debug } from '@ember/debug';
+         debug('I\'m a debug notice!');
+      ```
+         @method debug
+      @for @ember/debug
+      @static
+      @param {String} message A debug message to display.
+      @public
+    */
 
-            (_console = console).info.apply(_console, arguments); /* eslint-disable-line no-console */
-        });
-        /**
-         @module @ember/application
-         @public
-        */
-        /**
-          Alias an old, deprecated method with its new counterpart.
-             Display a deprecation warning with the provided message and a stack trace
-          (Chrome and Firefox only) when the assigned method is called.
-             Calls to this function are removed from production builds, so they can be
-          freely added for documentation and debugging purposes without worries of
-          incuring any performance penalty.
-             ```javascript
-          import { deprecateFunc } from '@ember/application/deprecations';
-             Ember.oldMethod = deprecateFunc('Please use the new, updated method', options, Ember.newMethod);
-          ```
-             @method deprecateFunc
-          @static
-          @for @ember/application/deprecations
-          @param {String} message A description of the deprecation.
-          @param {Object} [options] The options object for `deprecate`.
-          @param {Function} func The new function called to replace its deprecated counterpart.
-          @return {Function} A new function that wraps the original function with a deprecation warning
-          @private
-        */
-        setDebugFunction('deprecateFunc', function deprecateFunc() {
-            for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
-                args[_key] = arguments[_key];
-            }
+    setDebugFunction('debug', function debug(message) {
+      /* eslint-disable no-console */
+      if (console.debug) {
+        console.debug(`DEBUG: ${message}`);
+      } else {
+        console.log(`DEBUG: ${message}`);
+      }
+      /* eslint-ensable no-console */
 
-            if (args.length === 3) {
-                var message = args[0],
-                    options = args[1],
-                    func = args[2];
+    });
+    /**
+      Display an info notice.
+         Calls to this function are removed from production builds, so they can be
+      freely added for documentation and debugging purposes without worries of
+      incuring any performance penalty.
+         @method info
+      @private
+    */
 
-                return function () {
-                    deprecate(message, false, options);
-                    return func.apply(this, arguments);
-                };
-            } else {
-                var _message = args[0],
-                    _func = args[1];
-
-                return function () {
-                    deprecate(_message);
-                    return _func.apply(this, arguments);
-                };
-            }
-        });
-        /**
-         @module @ember/debug
-         @public
-        */
-        /**
-          Run a function meant for debugging.
-             Calls to this function are removed from production builds, so they can be
-          freely added for documentation and debugging purposes without worries of
-          incuring any performance penalty.
-             ```javascript
-          import Component from '@ember/component';
-          import { runInDebug } from '@ember/debug';
-             runInDebug(() => {
-            Component.reopen({
-              didInsertElement() {
-                console.log("I'm happy");
-              }
-            });
-          });
-          ```
-             @method runInDebug
-          @for @ember/debug
-          @static
-          @param {Function} func The function to be executed.
-          @since 1.5.0
-          @public
-        */
-        setDebugFunction('runInDebug', function runInDebug(func) {
-            func();
-        });
-        setDebugFunction('debugSeal', function debugSeal(obj) {
-            Object.seal(obj);
-        });
-        setDebugFunction('debugFreeze', function debugFreeze(obj) {
-            Object.freeze(obj);
-        });
-        setDebugFunction('deprecate', _deprecate2.default);
-        setDebugFunction('warn', _warn2.default);
-    }
-    var _warnIfUsingStrippedFeatureFlags = void 0;
-    if (true && !(0, _testing.isTesting)()) {
-        if (typeof window !== 'undefined' && (_emberBrowserEnvironment.isFirefox || _emberBrowserEnvironment.isChrome) && window.addEventListener) {
-            window.addEventListener('load', function () {
-                if (document.documentElement && document.documentElement.dataset && !document.documentElement.dataset.emberExtension) {
-                    var downloadURL = void 0;
-                    if (_emberBrowserEnvironment.isChrome) {
-                        downloadURL = 'https://chrome.google.com/webstore/detail/ember-inspector/bmdblncegkenkacieihfhpjfppoconhi';
-                    } else if (_emberBrowserEnvironment.isFirefox) {
-                        downloadURL = 'https://addons.mozilla.org/en-US/firefox/addon/ember-inspector/';
-                    }
-                    debug('For more advanced debugging, install the Ember Inspector from ' + downloadURL);
-                }
-            }, false);
-        }
-    }
-    exports.assert = assert;
-    exports.info = info;
-    exports.warn = warn;
-    exports.debug = debug;
-    exports.deprecate = deprecate;
-    exports.debugSeal = debugSeal;
-    exports.debugFreeze = debugFreeze;
-    exports.runInDebug = runInDebug;
-    exports.deprecateFunc = deprecateFunc;
-    exports.setDebugFunction = setDebugFunction;
-    exports.getDebugFunction = getDebugFunction;
-    exports._warnIfUsingStrippedFeatureFlags = _warnIfUsingStrippedFeatureFlags;
-});
-enifed('@ember/debug/lib/deprecate', ['exports', '@ember/deprecated-features', 'ember-environment', '@ember/debug/index', '@ember/debug/lib/handlers'], function (exports, _deprecatedFeatures, _emberEnvironment, _index, _handlers) {
-    'use strict';
-
-    exports.missingOptionsUntilDeprecation = exports.missingOptionsIdDeprecation = exports.missingOptionsDeprecation = exports.registerHandler = undefined;
-
+    setDebugFunction('info', function info() {
+      console.info(...arguments);
+      /* eslint-disable-line no-console */
+    });
     /**
      @module @ember/debug
      @public
     */
+
     /**
-      Allows for runtime registration of handler functions that override the default deprecation behavior.
-      Deprecations are invoked by calls to [@ember/application/deprecations/deprecate](https://emberjs.com/api/ember/release/classes/@ember%2Fapplication%2Fdeprecations/methods/deprecate?anchor=deprecate).
-      The following example demonstrates its usage by registering a handler that throws an error if the
-      message contains the word "should", otherwise defers to the default handler.
-    
-      ```javascript
-      import { registerDeprecationHandler } from '@ember/debug';
-    
-      registerDeprecationHandler((message, options, next) => {
-        if (message.indexOf('should') !== -1) {
-          throw new Error(`Deprecation message with should: ${message}`);
-        } else {
-          // defer to whatever handler was registered before this one
-          next(message, options);
-        }
+      Alias an old, deprecated method with its new counterpart.
+         Display a deprecation warning with the provided message and a stack trace
+      (Chrome and Firefox only) when the assigned method is called.
+         Calls to this function are removed from production builds, so they can be
+      freely added for documentation and debugging purposes without worries of
+      incuring any performance penalty.
+         ```javascript
+      import { deprecateFunc } from '@ember/debug';
+         Ember.oldMethod = deprecateFunc('Please use the new, updated method', options, Ember.newMethod);
+      ```
+         @method deprecateFunc
+      @static
+      @for @ember/debug
+      @param {String} message A description of the deprecation.
+      @param {Object} [options] The options object for `deprecate`.
+      @param {Function} func The new function called to replace its deprecated counterpart.
+      @return {Function} A new function that wraps the original function with a deprecation warning
+      @private
+    */
+
+    setDebugFunction('deprecateFunc', function deprecateFunc(...args) {
+      if (args.length === 3) {
+        var [message, options, func] = args;
+        return function (...args) {
+          deprecate(message, false, options);
+          return func.apply(this, args);
+        };
+      } else {
+        var [_message, _func] = args;
+        return function () {
+          deprecate(_message);
+          return _func.apply(this, arguments);
+        };
+      }
+    });
+    /**
+     @module @ember/debug
+     @public
+    */
+
+    /**
+      Run a function meant for debugging.
+         Calls to this function are removed from production builds, so they can be
+      freely added for documentation and debugging purposes without worries of
+      incuring any performance penalty.
+         ```javascript
+      import Component from '@ember/component';
+      import { runInDebug } from '@ember/debug';
+         runInDebug(() => {
+        Component.reopen({
+          didInsertElement() {
+            console.log("I'm happy");
+          }
+        });
       });
       ```
-    
-      The handler function takes the following arguments:
-    
-      <ul>
-        <li> <code>message</code> - The message received from the deprecation call.</li>
-        <li> <code>options</code> - An object passed in with the deprecation call containing additional information including:</li>
+         @method runInDebug
+      @for @ember/debug
+      @static
+      @param {Function} func The function to be executed.
+      @since 1.5.0
+      @public
+    */
+
+    setDebugFunction('runInDebug', function runInDebug(func) {
+      func();
+    });
+    setDebugFunction('debugSeal', function debugSeal(obj) {
+      Object.seal(obj);
+    });
+    setDebugFunction('debugFreeze', function debugFreeze(obj) {
+      // re-freezing an already frozen object introduces a significant
+      // performance penalty on Chrome (tested through 59).
+      //
+      // See: https://bugs.chromium.org/p/v8/issues/detail?id=6450
+      if (!Object.isFrozen(obj)) {
+        Object.freeze(obj);
+      }
+    });
+    setDebugFunction('deprecate', _deprecate2.default);
+    setDebugFunction('warn', _warn2.default);
+  }
+
+  var _warnIfUsingStrippedFeatureFlags;
+
+  _exports._warnIfUsingStrippedFeatureFlags = _warnIfUsingStrippedFeatureFlags;
+
+  if (true
+  /* DEBUG */
+  && !(0, _testing.isTesting)()) {
+    if (typeof window !== 'undefined' && (_browserEnvironment.isFirefox || _browserEnvironment.isChrome) && window.addEventListener) {
+      window.addEventListener('load', () => {
+        if (document.documentElement && document.documentElement.dataset && !document.documentElement.dataset.emberExtension) {
+          var downloadURL;
+
+          if (_browserEnvironment.isChrome) {
+            downloadURL = 'https://chrome.google.com/webstore/detail/ember-inspector/bmdblncegkenkacieihfhpjfppoconhi';
+          } else if (_browserEnvironment.isFirefox) {
+            downloadURL = 'https://addons.mozilla.org/en-US/firefox/addon/ember-inspector/';
+          }
+
+          debug(`For more advanced debugging, install the Ember Inspector from ${downloadURL}`);
+        }
+      }, false);
+    }
+  }
+});
+define("@ember/debug/lib/capture-render-tree", ["exports", "@glimmer/util"], function (_exports, _util) {
+  "use strict";
+
+  Object.defineProperty(_exports, "__esModule", {
+    value: true
+  });
+  _exports.default = captureRenderTree;
+
+  /**
+    @module @ember/debug
+  */
+
+  /**
+    Ember Inspector calls this function to capture the current render tree.
+  
+    In production mode, this requires turning on `ENV._DEBUG_RENDER_TREE`
+    before loading Ember.
+  
+    @private
+    @static
+    @method captureRenderTree
+    @for @ember/debug
+    @param app {ApplicationInstance} An `ApplicationInstance`.
+    @since 3.14.0
+  */
+  function captureRenderTree(app) {
+    var renderer = (0, _util.expect)(app.lookup('renderer:-dom'), `BUG: owner is missing renderer`);
+    return renderer.debugRenderTree.capture();
+  }
+});
+define("@ember/debug/lib/deprecate", ["exports", "@ember/-internals/environment", "@ember/debug/index", "@ember/debug/lib/handlers"], function (_exports, _environment, _index, _handlers) {
+  "use strict";
+
+  Object.defineProperty(_exports, "__esModule", {
+    value: true
+  });
+  _exports.SINCE_MISSING_DEPRECATIONS = _exports.FOR_MISSING_DEPRECATIONS = _exports.missingOptionsSinceDeprecation = _exports.missingOptionsForDeprecation = _exports.missingOptionsUntilDeprecation = _exports.missingOptionsIdDeprecation = _exports.missingOptionsDeprecation = _exports.registerHandler = _exports.default = void 0;
+
+  /**
+   @module @ember/debug
+   @public
+  */
+
+  /**
+    Allows for runtime registration of handler functions that override the default deprecation behavior.
+    Deprecations are invoked by calls to [@ember/debug/deprecate](/ember/release/classes/@ember%2Fdebug/methods/deprecate?anchor=deprecate).
+    The following example demonstrates its usage by registering a handler that throws an error if the
+    message contains the word "should", otherwise defers to the default handler.
+  
+    ```javascript
+    import { registerDeprecationHandler } from '@ember/debug';
+  
+    registerDeprecationHandler((message, options, next) => {
+      if (message.indexOf('should') !== -1) {
+        throw new Error(`Deprecation message with should: ${message}`);
+      } else {
+        // defer to whatever handler was registered before this one
+        next(message, options);
+      }
+    });
+    ```
+  
+    The handler function takes the following arguments:
+  
+    <ul>
+      <li> <code>message</code> - The message received from the deprecation call.</li>
+      <li> <code>options</code> - An object passed in with the deprecation call containing additional information including:</li>
+        <ul>
+          <li> <code>id</code> - An id of the deprecation in the form of <code>package-name.specific-deprecation</code>.</li>
+          <li> <code>until</code> - The Ember version number the feature and deprecation will be removed in.</li>
+        </ul>
+      <li> <code>next</code> - A function that calls into the previously registered handler.</li>
+    </ul>
+  
+    @public
+    @static
+    @method registerDeprecationHandler
+    @for @ember/debug
+    @param handler {Function} A function to handle deprecation calls.
+    @since 2.1.0
+  */
+  var registerHandler = () => {};
+
+  _exports.registerHandler = registerHandler;
+  var missingOptionsDeprecation;
+  _exports.missingOptionsDeprecation = missingOptionsDeprecation;
+  var missingOptionsIdDeprecation;
+  _exports.missingOptionsIdDeprecation = missingOptionsIdDeprecation;
+  var missingOptionsUntilDeprecation;
+  _exports.missingOptionsUntilDeprecation = missingOptionsUntilDeprecation;
+
+  var missingOptionsForDeprecation = () => '';
+
+  _exports.missingOptionsForDeprecation = missingOptionsForDeprecation;
+
+  var missingOptionsSinceDeprecation = () => '';
+
+  _exports.missingOptionsSinceDeprecation = missingOptionsSinceDeprecation;
+
+  var deprecate = () => {};
+
+  var FOR_MISSING_DEPRECATIONS = new Set();
+  _exports.FOR_MISSING_DEPRECATIONS = FOR_MISSING_DEPRECATIONS;
+  var SINCE_MISSING_DEPRECATIONS = new Set();
+  _exports.SINCE_MISSING_DEPRECATIONS = SINCE_MISSING_DEPRECATIONS;
+
+  if (true
+  /* DEBUG */
+  ) {
+    _exports.registerHandler = registerHandler = function registerHandler(handler) {
+      (0, _handlers.registerHandler)('deprecate', handler);
+    };
+
+    var formatMessage = function formatMessage(_message, options) {
+      var message = _message;
+
+      if (options && options.id) {
+        message = message + ` [deprecation id: ${options.id}]`;
+      }
+
+      if (options && options.url) {
+        message += ` See ${options.url} for more details.`;
+      }
+
+      return message;
+    };
+
+    registerHandler(function logDeprecationToConsole(message, options) {
+      var updatedMessage = formatMessage(message, options);
+      console.warn(`DEPRECATION: ${updatedMessage}`); // eslint-disable-line no-console
+    });
+    var captureErrorForStack;
+
+    if (new Error().stack) {
+      captureErrorForStack = () => new Error();
+    } else {
+      captureErrorForStack = () => {
+        try {
+          __fail__.fail();
+        } catch (e) {
+          return e;
+        }
+      };
+    }
+
+    registerHandler(function logDeprecationStackTrace(message, options, next) {
+      if (_environment.ENV.LOG_STACKTRACE_ON_DEPRECATION) {
+        var stackStr = '';
+        var error = captureErrorForStack();
+        var stack;
+
+        if (error.stack) {
+          if (error['arguments']) {
+            // Chrome
+            stack = error.stack.replace(/^\s+at\s+/gm, '').replace(/^([^(]+?)([\n$])/gm, '{anonymous}($1)$2').replace(/^Object.<anonymous>\s*\(([^)]+)\)/gm, '{anonymous}($1)').split('\n');
+            stack.shift();
+          } else {
+            // Firefox
+            stack = error.stack.replace(/(?:\n@:0)?\s+$/m, '').replace(/^\(/gm, '{anonymous}(').split('\n');
+          }
+
+          stackStr = `\n    ${stack.slice(2).join('\n    ')}`;
+        }
+
+        var updatedMessage = formatMessage(message, options);
+        console.warn(`DEPRECATION: ${updatedMessage}${stackStr}`); // eslint-disable-line no-console
+      } else {
+        next(message, options);
+      }
+    });
+    registerHandler(function raiseOnDeprecation(message, options, next) {
+      if (_environment.ENV.RAISE_ON_DEPRECATION) {
+        var updatedMessage = formatMessage(message);
+        throw new Error(updatedMessage);
+      } else {
+        next(message, options);
+      }
+    });
+    _exports.missingOptionsDeprecation = missingOptionsDeprecation = 'When calling `deprecate` you ' + 'must provide an `options` hash as the third parameter.  ' + '`options` should include `id` and `until` properties.';
+    _exports.missingOptionsIdDeprecation = missingOptionsIdDeprecation = 'When calling `deprecate` you must provide `id` in options.';
+    _exports.missingOptionsUntilDeprecation = missingOptionsUntilDeprecation = 'When calling `deprecate` you must provide `until` in options.';
+
+    _exports.missingOptionsForDeprecation = missingOptionsForDeprecation = id => {
+      return `When calling \`deprecate\` you must provide \`for\` in options. Missing options.for in "${id}" deprecation`;
+    };
+
+    _exports.missingOptionsSinceDeprecation = missingOptionsSinceDeprecation = id => {
+      return `When calling \`deprecate\` you must provide \`since\` in options. Missing options.since in "${id}" deprecation`;
+    };
+    /**
+     @module @ember/debug
+     @public
+     */
+
+    /**
+      Display a deprecation warning with the provided message and a stack trace
+      (Chrome and Firefox only).
+         * In a production build, this method is defined as an empty function (NOP).
+      Uses of this method in Ember itself are stripped from the ember.prod.js build.
+         @method deprecate
+      @for @ember/debug
+      @param {String} message A description of the deprecation.
+      @param {Boolean} test A boolean. If falsy, the deprecation will be displayed.
+      @param {Object} options
+      @param {String} options.id A unique id for this deprecation. The id can be
+        used by Ember debugging tools to change the behavior (raise, log or silence)
+        for that specific deprecation. The id should be namespaced by dots, e.g.
+        "view.helper.select".
+      @param {string} options.until The version of Ember when this deprecation
+        warning will be removed.
+      @param {String} options.for A namespace for the deprecation, usually the package name
+      @param {Object} options.since Describes when the deprecation became available and enabled.
+      @param {String} [options.url] An optional url to the transition guide on the
+            emberjs.com website.
+      @static
+      @public
+      @since 1.0.0
+    */
+
+
+    deprecate = function deprecate(message, test, options) {
+      (0, _index.assert)(missingOptionsDeprecation, Boolean(options && (options.id || options.until)));
+      (0, _index.assert)(missingOptionsIdDeprecation, Boolean(options.id));
+      (0, _index.assert)(missingOptionsUntilDeprecation, Boolean(options.until));
+
+      if (!options.for && !FOR_MISSING_DEPRECATIONS.has(options.id)) {
+        FOR_MISSING_DEPRECATIONS.add(options.id);
+        deprecate(missingOptionsForDeprecation(options.id), Boolean(options.for), {
+          id: 'ember-source.deprecation-without-for',
+          until: '4.0.0',
+          for: 'ember-source',
+          since: {
+            enabled: '3.24.0'
+          }
+        });
+      }
+
+      if (!options.since && !SINCE_MISSING_DEPRECATIONS.has(options.id)) {
+        SINCE_MISSING_DEPRECATIONS.add(options.id);
+        deprecate(missingOptionsSinceDeprecation(options.id), Boolean(options.since), {
+          id: 'ember-source.deprecation-without-since',
+          until: '4.0.0',
+          for: 'ember-source',
+          since: {
+            enabled: '3.24.0'
+          }
+        });
+      }
+
+      (0, _handlers.invoke)('deprecate', message, test, options);
+    };
+  }
+
+  var _default = deprecate;
+  _exports.default = _default;
+});
+define("@ember/debug/lib/handlers", ["exports"], function (_exports) {
+  "use strict";
+
+  Object.defineProperty(_exports, "__esModule", {
+    value: true
+  });
+  _exports.invoke = _exports.registerHandler = _exports.HANDLERS = void 0;
+  var HANDLERS = {};
+  _exports.HANDLERS = HANDLERS;
+
+  var registerHandler = () => {};
+
+  _exports.registerHandler = registerHandler;
+
+  var invoke = () => {};
+
+  _exports.invoke = invoke;
+
+  if (true
+  /* DEBUG */
+  ) {
+    _exports.registerHandler = registerHandler = function registerHandler(type, callback) {
+      var nextHandler = HANDLERS[type] || (() => {});
+
+      HANDLERS[type] = (message, options) => {
+        callback(message, options, nextHandler);
+      };
+    };
+
+    _exports.invoke = invoke = function invoke(type, message, test, options) {
+      if (test) {
+        return;
+      }
+
+      var handlerForType = HANDLERS[type];
+
+      if (handlerForType) {
+        handlerForType(message, options);
+      }
+    };
+  }
+});
+define("@ember/debug/lib/testing", ["exports"], function (_exports) {
+  "use strict";
+
+  Object.defineProperty(_exports, "__esModule", {
+    value: true
+  });
+  _exports.isTesting = isTesting;
+  _exports.setTesting = setTesting;
+  var testing = false;
+
+  function isTesting() {
+    return testing;
+  }
+
+  function setTesting(value) {
+    testing = Boolean(value);
+  }
+});
+define("@ember/debug/lib/warn", ["exports", "@ember/debug/index", "@ember/debug/lib/handlers"], function (_exports, _index, _handlers) {
+  "use strict";
+
+  Object.defineProperty(_exports, "__esModule", {
+    value: true
+  });
+  _exports.missingOptionsDeprecation = _exports.missingOptionsIdDeprecation = _exports.registerHandler = _exports.default = void 0;
+
+  var registerHandler = () => {};
+
+  _exports.registerHandler = registerHandler;
+
+  var warn = () => {};
+
+  var missingOptionsDeprecation;
+  _exports.missingOptionsDeprecation = missingOptionsDeprecation;
+  var missingOptionsIdDeprecation;
+  /**
+  @module @ember/debug
+  */
+
+  _exports.missingOptionsIdDeprecation = missingOptionsIdDeprecation;
+
+  if (true
+  /* DEBUG */
+  ) {
+    /**
+      Allows for runtime registration of handler functions that override the default warning behavior.
+      Warnings are invoked by calls made to [@ember/debug/warn](/ember/release/classes/@ember%2Fdebug/methods/warn?anchor=warn).
+      The following example demonstrates its usage by registering a handler that does nothing overriding Ember's
+      default warning behavior.
+         ```javascript
+      import { registerWarnHandler } from '@ember/debug';
+         // next is not called, so no warnings get the default behavior
+      registerWarnHandler(() => {});
+      ```
+         The handler function takes the following arguments:
+         <ul>
+        <li> <code>message</code> - The message received from the warn call. </li>
+        <li> <code>options</code> - An object passed in with the warn call containing additional information including:</li>
           <ul>
-            <li> <code>id</code> - An id of the deprecation in the form of <code>package-name.specific-deprecation</code>.</li>
-            <li> <code>until</code> - The Ember version number the feature and deprecation will be removed in.</li>
+            <li> <code>id</code> - An id of the warning in the form of <code>package-name.specific-warning</code>.</li>
           </ul>
         <li> <code>next</code> - A function that calls into the previously registered handler.</li>
       </ul>
-    
-      @public
+         @public
       @static
-      @method registerDeprecationHandler
+      @method registerWarnHandler
       @for @ember/debug
-      @param handler {Function} A function to handle deprecation calls.
+      @param handler {Function} A function to handle warnings.
       @since 2.1.0
     */
-    var registerHandler = function () {};
-    var missingOptionsDeprecation = void 0;
-    var missingOptionsIdDeprecation = void 0;
-    var missingOptionsUntilDeprecation = void 0;
-    var deprecate = function () {};
-    if (true) {
-        exports.registerHandler = registerHandler = function registerHandler(handler) {
-            (0, _handlers.registerHandler)('deprecate', handler);
-        };
-        var formatMessage = function formatMessage(_message, options) {
-            var message = _message;
-            if (options && options.id) {
-                message = message + (' [deprecation id: ' + options.id + ']');
-            }
-            if (options && options.url) {
-                message += ' See ' + options.url + ' for more details.';
-            }
-            return message;
-        };
-        registerHandler(function logDeprecationToConsole(message, options) {
-            var updatedMessage = formatMessage(message, options);
-            console.warn('DEPRECATION: ' + updatedMessage); // eslint-disable-line no-console
-        });
-        var captureErrorForStack = void 0;
-        if (new Error().stack) {
-            captureErrorForStack = function () {
-                return new Error();
-            };
-        } else {
-            captureErrorForStack = function () {
-                try {
-                    __fail__.fail();
-                } catch (e) {
-                    return e;
-                }
-            };
-        }
-        registerHandler(function logDeprecationStackTrace(message, options, next) {
-            if (_emberEnvironment.ENV.LOG_STACKTRACE_ON_DEPRECATION) {
-                var stackStr = '';
-                var error = captureErrorForStack();
-                var stack = void 0;
-                if (error.stack) {
-                    if (error['arguments']) {
-                        // Chrome
-                        stack = error.stack.replace(/^\s+at\s+/gm, '').replace(/^([^\(]+?)([\n$])/gm, '{anonymous}($1)$2').replace(/^Object.<anonymous>\s*\(([^\)]+)\)/gm, '{anonymous}($1)').split('\n');
-                        stack.shift();
-                    } else {
-                        // Firefox
-                        stack = error.stack.replace(/(?:\n@:0)?\s+$/m, '').replace(/^\(/gm, '{anonymous}(').split('\n');
-                    }
-                    stackStr = '\n    ' + stack.slice(2).join('\n    ');
-                }
-                var updatedMessage = formatMessage(message, options);
-                console.warn('DEPRECATION: ' + updatedMessage + stackStr); // eslint-disable-line no-console
-            } else {
-                next(message, options);
-            }
-        });
-        registerHandler(function raiseOnDeprecation(message, options, next) {
-            if (_emberEnvironment.ENV.RAISE_ON_DEPRECATION) {
-                var updatedMessage = formatMessage(message);
-                throw new Error(updatedMessage);
-            } else {
-                next(message, options);
-            }
-        });
-        exports.missingOptionsDeprecation = missingOptionsDeprecation = 'When calling `deprecate` you ' + 'must provide an `options` hash as the third parameter.  ' + '`options` should include `id` and `until` properties.';
-        exports.missingOptionsIdDeprecation = missingOptionsIdDeprecation = 'When calling `deprecate` you must provide `id` in options.';
-        exports.missingOptionsUntilDeprecation = missingOptionsUntilDeprecation = 'When calling `deprecate` you must provide `until` in options.';
-        /**
-         @module @ember/application
-         @public
-         */
-        /**
-          Display a deprecation warning with the provided message and a stack trace
-          (Chrome and Firefox only).
-             * In a production build, this method is defined as an empty function (NOP).
-          Uses of this method in Ember itself are stripped from the ember.prod.js build.
-             @method deprecate
-          @for @ember/application/deprecations
-          @param {String} message A description of the deprecation.
-          @param {Boolean} test A boolean. If falsy, the deprecation will be displayed.
-          @param {Object} options
-          @param {String} options.id A unique id for this deprecation. The id can be
-            used by Ember debugging tools to change the behavior (raise, log or silence)
-            for that specific deprecation. The id should be namespaced by dots, e.g.
-            "view.helper.select".
-          @param {string} options.until The version of Ember when this deprecation
-            warning will be removed.
-          @param {String} [options.url] An optional url to the transition guide on the
-            emberjs.com website.
-          @static
-          @public
-          @since 1.0.0
-        */
-        deprecate = function deprecate(message, test, options) {
-            if (_emberEnvironment.ENV._ENABLE_DEPRECATION_OPTIONS_SUPPORT !== true) {
-                (0, _index.assert)(missingOptionsDeprecation, !!(options && (options.id || options.until)));
-                (0, _index.assert)(missingOptionsIdDeprecation, !!options.id);
-                (0, _index.assert)(missingOptionsUntilDeprecation, !!options.until);
-            }
-            if (_deprecatedFeatures.DEPRECATE_OPTIONS_MISSING && (!options || !options.id && !options.until) && _emberEnvironment.ENV._ENABLE_DEPRECATION_OPTIONS_SUPPORT === true) {
-                deprecate(missingOptionsDeprecation, false, {
-                    id: 'ember-debug.deprecate-options-missing',
-                    until: '3.0.0',
-                    url: 'https://emberjs.com/deprecations/v2.x/#toc_ember-debug-function-options'
-                });
-            }
-            if (_deprecatedFeatures.DEPRECATE_ID_MISSING && options && !options.id && _emberEnvironment.ENV._ENABLE_DEPRECATION_OPTIONS_SUPPORT === true) {
-                deprecate(missingOptionsIdDeprecation, false, {
-                    id: 'ember-debug.deprecate-id-missing',
-                    until: '3.0.0',
-                    url: 'https://emberjs.com/deprecations/v2.x/#toc_ember-debug-function-options'
-                });
-            }
-            if (_deprecatedFeatures.DEPRECATE_UNTIL_MISSING && options && !options.until && _emberEnvironment.ENV._ENABLE_DEPRECATION_OPTIONS_SUPPORT === true) {
-                deprecate(missingOptionsUntilDeprecation, !!(options && options.until), {
-                    id: 'ember-debug.deprecate-until-missing',
-                    until: '3.0.0',
-                    url: 'https://emberjs.com/deprecations/v2.x/#toc_ember-debug-function-options'
-                });
-            }
-            (0, _handlers.invoke)('deprecate', message, test, options);
-        };
-    }
-    exports.default = deprecate;
-    exports.registerHandler = registerHandler;
-    exports.missingOptionsDeprecation = missingOptionsDeprecation;
-    exports.missingOptionsIdDeprecation = missingOptionsIdDeprecation;
-    exports.missingOptionsUntilDeprecation = missingOptionsUntilDeprecation;
-});
-enifed('@ember/debug/lib/handlers', ['exports'], function (exports) {
-    'use strict';
+    _exports.registerHandler = registerHandler = function registerHandler(handler) {
+      (0, _handlers.registerHandler)('warn', handler);
+    };
 
-    var HANDLERS = exports.HANDLERS = {};
-    var registerHandler = function () {};
-    var invoke = function () {};
-    if (true) {
-        exports.registerHandler = registerHandler = function registerHandler(type, callback) {
-            var nextHandler = HANDLERS[type] || function () {};
-            HANDLERS[type] = function (message, options) {
-                callback(message, options, nextHandler);
-            };
-        };
-        exports.invoke = invoke = function invoke(type, message, test, options) {
-            if (test) {
-                return;
-            }
-            var handlerForType = HANDLERS[type];
-            if (handlerForType) {
-                handlerForType(message, options);
-            }
-        };
-    }
-    exports.registerHandler = registerHandler;
-    exports.invoke = invoke;
-});
-enifed("@ember/debug/lib/testing", ["exports"], function (exports) {
-    "use strict";
-
-    exports.isTesting = isTesting;
-    exports.setTesting = setTesting;
-    var testing = false;
-    function isTesting() {
-        return testing;
-    }
-    function setTesting(value) {
-        testing = !!value;
-    }
-    //# sourceMappingURL=testing.js.map
-});
-enifed('@ember/debug/lib/warn', ['exports', 'ember-environment', '@ember/debug/index', '@ember/debug/lib/deprecate', '@ember/debug/lib/handlers'], function (exports, _emberEnvironment, _index, _deprecate, _handlers) {
-    'use strict';
-
-    exports.missingOptionsDeprecation = exports.missingOptionsIdDeprecation = exports.registerHandler = undefined;
-
-    var registerHandler = function () {};
-    var warn = function () {};
-    var missingOptionsDeprecation = void 0;
-    var missingOptionsIdDeprecation = void 0;
-    /**
-    @module @ember/debug
-    */
-    if (true) {
-        /**
-          Allows for runtime registration of handler functions that override the default warning behavior.
-          Warnings are invoked by calls made to [@ember/debug/warn](https://emberjs.com/api/ember/release/classes/@ember%2Fdebug/methods/warn?anchor=warn).
-          The following example demonstrates its usage by registering a handler that does nothing overriding Ember's
-          default warning behavior.
-             ```javascript
-          import { registerWarnHandler } from '@ember/debug';
-             // next is not called, so no warnings get the default behavior
-          registerWarnHandler(() => {});
-          ```
-             The handler function takes the following arguments:
-             <ul>
-            <li> <code>message</code> - The message received from the warn call. </li>
-            <li> <code>options</code> - An object passed in with the warn call containing additional information including:</li>
-              <ul>
-                <li> <code>id</code> - An id of the warning in the form of <code>package-name.specific-warning</code>.</li>
-              </ul>
-            <li> <code>next</code> - A function that calls into the previously registered handler.</li>
-          </ul>
-             @public
-          @static
-          @method registerWarnHandler
-          @for @ember/debug
-          @param handler {Function} A function to handle warnings.
-          @since 2.1.0
-        */
-        exports.registerHandler = registerHandler = function registerHandler(handler) {
-            (0, _handlers.registerHandler)('warn', handler);
-        };
-        registerHandler(function logWarning(message) {
-            /* eslint-disable no-console */
-            console.warn('WARNING: ' + message);
-            if (console.trace) {
-                console.trace();
-            }
-            /* eslint-enable no-console */
-        });
-        exports.missingOptionsDeprecation = missingOptionsDeprecation = 'When calling `warn` you ' + 'must provide an `options` hash as the third parameter.  ' + '`options` should include an `id` property.';
-        exports.missingOptionsIdDeprecation = missingOptionsIdDeprecation = 'When calling `warn` you must provide `id` in options.';
-        /**
-          Display a warning with the provided message.
-             * In a production build, this method is defined as an empty function (NOP).
-          Uses of this method in Ember itself are stripped from the ember.prod.js build.
-             @method warn
-          @for @ember/debug
-          @static
-          @param {String} message A warning to display.
-          @param {Boolean} test An optional boolean. If falsy, the warning
-            will be displayed.
-          @param {Object} options An object that can be used to pass a unique
-            `id` for this warning.  The `id` can be used by Ember debugging tools
-            to change the behavior (raise, log, or silence) for that specific warning.
-            The `id` should be namespaced by dots, e.g. "ember-debug.feature-flag-with-features-stripped"
-          @public
-          @since 1.0.0
-        */
-        warn = function warn(message, test, options) {
-            if (arguments.length === 2 && typeof test === 'object') {
-                options = test;
-                test = false;
-            }
-            if (_emberEnvironment.ENV._ENABLE_WARN_OPTIONS_SUPPORT !== true) {
-                (0, _index.assert)(missingOptionsDeprecation, !!options);
-                (0, _index.assert)(missingOptionsIdDeprecation, !!(options && options.id));
-            }
-            if (!options && _emberEnvironment.ENV._ENABLE_WARN_OPTIONS_SUPPORT === true) {
-                (0, _deprecate.default)(missingOptionsDeprecation, false, {
-                    id: 'ember-debug.warn-options-missing',
-                    until: '3.0.0',
-                    url: 'https://emberjs.com/deprecations/v2.x/#toc_ember-debug-function-options'
-                });
-            }
-            if (options && !options.id && _emberEnvironment.ENV._ENABLE_WARN_OPTIONS_SUPPORT === true) {
-                (0, _deprecate.default)(missingOptionsIdDeprecation, false, {
-                    id: 'ember-debug.warn-id-missing',
-                    until: '3.0.0',
-                    url: 'https://emberjs.com/deprecations/v2.x/#toc_ember-debug-function-options'
-                });
-            }
-            (0, _handlers.invoke)('warn', message, test, options);
-        };
-    }
-    exports.default = warn;
-    exports.registerHandler = registerHandler;
-    exports.missingOptionsIdDeprecation = missingOptionsIdDeprecation;
-    exports.missingOptionsDeprecation = missingOptionsDeprecation;
-});
-enifed('ember-babel', ['exports'], function (exports) {
-  'use strict';
-
-  exports.classCallCheck = classCallCheck;
-  exports.inherits = inherits;
-  exports.taggedTemplateLiteralLoose = taggedTemplateLiteralLoose;
-  exports.createClass = createClass;
-  var create = Object.create;
-  var setPrototypeOf = Object.setPrototypeOf;
-  var defineProperty = Object.defineProperty;
-
-  function classCallCheck(instance, Constructor) {
-    if (!(instance instanceof Constructor)) {
-      throw new TypeError('Cannot call a class as a function');
-    }
-  }
-
-  function inherits(subClass, superClass) {
-    if (typeof superClass !== 'function' && superClass !== null) {
-      throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass);
-    }
-    subClass.prototype = create(superClass === null ? null : superClass.prototype, {
-      constructor: {
-        value: subClass,
-        enumerable: false,
-        writable: true,
-        configurable: true
-      }
+    registerHandler(function logWarning(message) {
+      /* eslint-disable no-console */
+      console.warn(`WARNING: ${message}`);
+      /* eslint-enable no-console */
     });
-    if (superClass !== null) setPrototypeOf(subClass, superClass);
+    _exports.missingOptionsDeprecation = missingOptionsDeprecation = 'When calling `warn` you ' + 'must provide an `options` hash as the third parameter.  ' + '`options` should include an `id` property.';
+    _exports.missingOptionsIdDeprecation = missingOptionsIdDeprecation = 'When calling `warn` you must provide `id` in options.';
+    /**
+      Display a warning with the provided message.
+         * In a production build, this method is defined as an empty function (NOP).
+      Uses of this method in Ember itself are stripped from the ember.prod.js build.
+         ```javascript
+      import { warn } from '@ember/debug';
+      import tomsterCount from './tomster-counter'; // a module in my project
+         // Log a warning if we have more than 3 tomsters
+      warn('Too many tomsters!', tomsterCount <= 3, {
+        id: 'ember-debug.too-many-tomsters'
+      });
+      ```
+         @method warn
+      @for @ember/debug
+      @static
+      @param {String} message A warning to display.
+      @param {Boolean} test An optional boolean. If falsy, the warning
+        will be displayed.
+      @param {Object} options An object that can be used to pass a unique
+        `id` for this warning.  The `id` can be used by Ember debugging tools
+        to change the behavior (raise, log, or silence) for that specific warning.
+        The `id` should be namespaced by dots, e.g. "ember-debug.feature-flag-with-features-stripped"
+      @public
+      @since 1.0.0
+    */
+
+    warn = function warn(message, test, options) {
+      if (arguments.length === 2 && typeof test === 'object') {
+        options = test;
+        test = false;
+      }
+
+      (0, _index.assert)(missingOptionsDeprecation, Boolean(options));
+      (0, _index.assert)(missingOptionsIdDeprecation, Boolean(options && options.id));
+      (0, _handlers.invoke)('warn', message, test, options);
+    };
   }
 
-  function taggedTemplateLiteralLoose(strings, raw) {
-    strings.raw = raw;
-    return strings;
-  }
-
-  function defineProperties(target, props) {
-    for (var i = 0; i < props.length; i++) {
-      var descriptor = props[i];
-      descriptor.enumerable = descriptor.enumerable || false;
-      descriptor.configurable = true;
-      if ('value' in descriptor) descriptor.writable = true;
-      defineProperty(target, descriptor.key, descriptor);
-    }
-  }
-
-  function createClass(Constructor, protoProps, staticProps) {
-    if (protoProps !== undefined) defineProperties(Constructor.prototype, protoProps);
-    if (staticProps !== undefined) defineProperties(Constructor, staticProps);
-    return Constructor;
-  }
-
-  var possibleConstructorReturn = exports.possibleConstructorReturn = function (self, call) {
-    if (!self) {
-      throw new ReferenceError('this hasn\'t been initialized - super() hasn\'t been called');
-    }
-    return call !== null && typeof call === 'object' || typeof call === 'function' ? call : self;
-  };
+  var _default = warn;
+  _exports.default = _default;
 });
-enifed('ember-testing/index', ['exports', 'ember-testing/lib/test', 'ember-testing/lib/adapters/adapter', 'ember-testing/lib/setup_for_testing', 'ember-testing/lib/adapters/qunit', 'ember-testing/lib/support', 'ember-testing/lib/ext/application', 'ember-testing/lib/ext/rsvp', 'ember-testing/lib/helpers', 'ember-testing/lib/initializers'], function (exports, _test, _adapter, _setup_for_testing, _qunit) {
-  'use strict';
+define("ember-testing/index", ["exports", "ember-testing/lib/test", "ember-testing/lib/adapters/adapter", "ember-testing/lib/setup_for_testing", "ember-testing/lib/adapters/qunit", "ember-testing/lib/support", "ember-testing/lib/ext/application", "ember-testing/lib/ext/rsvp", "ember-testing/lib/helpers", "ember-testing/lib/initializers"], function (_exports, _test, _adapter, _setup_for_testing, _qunit, _support, _application, _rsvp, _helpers, _initializers) {
+  "use strict";
 
-  exports.QUnitAdapter = exports.setupForTesting = exports.Adapter = exports.Test = undefined;
-  Object.defineProperty(exports, 'Test', {
+  Object.defineProperty(_exports, "__esModule", {
+    value: true
+  });
+  Object.defineProperty(_exports, "Test", {
     enumerable: true,
     get: function () {
       return _test.default;
     }
   });
-  Object.defineProperty(exports, 'Adapter', {
+  Object.defineProperty(_exports, "Adapter", {
     enumerable: true,
     get: function () {
       return _adapter.default;
     }
   });
-  Object.defineProperty(exports, 'setupForTesting', {
+  Object.defineProperty(_exports, "setupForTesting", {
     enumerable: true,
     get: function () {
       return _setup_for_testing.default;
     }
   });
-  Object.defineProperty(exports, 'QUnitAdapter', {
+  Object.defineProperty(_exports, "QUnitAdapter", {
     enumerable: true,
     get: function () {
       return _qunit.default;
     }
   });
 });
-enifed('ember-testing/lib/adapters/adapter', ['exports', 'ember-runtime'], function (exports, _emberRuntime) {
-  'use strict';
+define("ember-testing/lib/adapters/adapter", ["exports", "@ember/-internals/runtime"], function (_exports, _runtime) {
+  "use strict";
+
+  Object.defineProperty(_exports, "__esModule", {
+    value: true
+  });
+  _exports.default = void 0;
 
   function K() {
     return this;
   }
-
   /**
    @module @ember/test
   */
@@ -827,7 +902,9 @@ enifed('ember-testing/lib/adapters/adapter', ['exports', 'ember-runtime'], funct
     @class TestAdapter
     @public
   */
-  exports.default = _emberRuntime.Object.extend({
+
+
+  var _default = _runtime.Object.extend({
     /**
       This callback will be called whenever an async operation is about to start.
        Override this to call your framework's methods that handle async
@@ -858,19 +935,43 @@ enifed('ember-testing/lib/adapters/adapter', ['exports', 'ember-runtime'], funct
       @method exception
       @param {String} error The exception to be raised.
     */
-    exception: function (error) {
+    exception(error) {
       throw error;
     }
-  });
-});
-enifed('ember-testing/lib/adapters/qunit', ['exports', 'ember-utils', 'ember-testing/lib/adapters/adapter'], function (exports, _emberUtils, _adapter) {
-  'use strict';
 
-  exports.default = _adapter.default.extend({
-    init: function () {
+  });
+
+  _exports.default = _default;
+});
+define("ember-testing/lib/adapters/qunit", ["exports", "@ember/-internals/utils", "ember-testing/lib/adapters/adapter"], function (_exports, _utils, _adapter) {
+  "use strict";
+
+  Object.defineProperty(_exports, "__esModule", {
+    value: true
+  });
+  _exports.default = void 0;
+
+  /* globals QUnit */
+
+  /**
+     @module ember
+  */
+
+  /**
+    This class implements the methods defined by TestAdapter for the
+    QUnit testing framework.
+  
+    @class QUnitAdapter
+    @namespace Ember.Test
+    @extends TestAdapter
+    @public
+  */
+  var _default = _adapter.default.extend({
+    init() {
       this.doneCallbacks = [];
     },
-    asyncStart: function () {
+
+    asyncStart() {
       if (typeof QUnit.stop === 'function') {
         // very old QUnit version
         QUnit.stop();
@@ -878,33 +979,42 @@ enifed('ember-testing/lib/adapters/qunit', ['exports', 'ember-utils', 'ember-tes
         this.doneCallbacks.push(QUnit.config.current ? QUnit.config.current.assert.async() : null);
       }
     },
-    asyncEnd: function () {
+
+    asyncEnd() {
       // checking for QUnit.stop here (even though we _need_ QUnit.start) because
       // QUnit.start() still exists in QUnit 2.x (it just throws an error when calling
       // inside a test context)
       if (typeof QUnit.stop === 'function') {
         QUnit.start();
       } else {
-        var done = this.doneCallbacks.pop();
-        // This can be null if asyncStart() was called outside of a test
+        var done = this.doneCallbacks.pop(); // This can be null if asyncStart() was called outside of a test
+
         if (done) {
           done();
         }
       }
     },
-    exception: function (error) {
-      QUnit.config.current.assert.ok(false, (0, _emberUtils.inspect)(error));
+
+    exception(error) {
+      QUnit.config.current.assert.ok(false, (0, _utils.inspect)(error));
     }
+
   });
+
+  _exports.default = _default;
 });
-enifed('ember-testing/lib/events', ['exports', '@ember/runloop', '@ember/polyfills', 'ember-testing/lib/helpers/-is-form-control'], function (exports, _runloop, _polyfills, _isFormControl) {
-  'use strict';
+define("ember-testing/lib/events", ["exports", "@ember/runloop", "@ember/polyfills", "ember-testing/lib/helpers/-is-form-control"], function (_exports, _runloop, _polyfills, _isFormControl) {
+  "use strict";
 
-  exports.focus = focus;
-  exports.fireEvent = fireEvent;
-
-
-  var DEFAULT_EVENT_OPTIONS = { canBubble: true, cancelable: true };
+  Object.defineProperty(_exports, "__esModule", {
+    value: true
+  });
+  _exports.focus = focus;
+  _exports.fireEvent = fireEvent;
+  var DEFAULT_EVENT_OPTIONS = {
+    canBubble: true,
+    cancelable: true
+  };
   var KEYBOARD_EVENT_TYPES = ['keydown', 'keypress', 'keyup'];
   var MOUSE_EVENT_TYPES = ['click', 'mousedown', 'mouseup', 'dblclick', 'mouseenter', 'mouseleave', 'mousemove', 'mouseout', 'mouseover'];
 
@@ -912,24 +1022,23 @@ enifed('ember-testing/lib/events', ['exports', '@ember/runloop', '@ember/polyfil
     if (!el) {
       return;
     }
+
     if (el.isContentEditable || (0, _isFormControl.default)(el)) {
       var type = el.getAttribute('type');
+
       if (type !== 'checkbox' && type !== 'radio' && type !== 'hidden') {
         (0, _runloop.run)(null, function () {
-          var browserIsNotFocused = document.hasFocus && !document.hasFocus();
+          var browserIsNotFocused = document.hasFocus && !document.hasFocus(); // makes `document.activeElement` be `element`. If the browser is focused, it also fires a focus event
 
-          // makes `document.activeElement` be `element`. If the browser is focused, it also fires a focus event
-          el.focus();
-
-          // Firefox does not trigger the `focusin` event if the window
+          el.focus(); // Firefox does not trigger the `focusin` event if the window
           // does not have focus. If the document does not have focus then
           // fire `focusin` event as well.
+
           if (browserIsNotFocused) {
             // if the browser is not focused the previous `el.focus()` didn't fire an event, so we simulate it
             fireEvent(el, 'focus', {
               bubbles: false
             });
-
             fireEvent(el, 'focusin');
           }
         });
@@ -937,13 +1046,13 @@ enifed('ember-testing/lib/events', ['exports', '@ember/runloop', '@ember/polyfil
     }
   }
 
-  function fireEvent(element, type) {
-    var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
-
+  function fireEvent(element, type, options = {}) {
     if (!element) {
       return;
     }
-    var event = void 0;
+
+    var event;
+
     if (KEYBOARD_EVENT_TYPES.indexOf(type) > -1) {
       event = buildKeyboardEvent(type, options);
     } else if (MOUSE_EVENT_TYPES.indexOf(type) > -1) {
@@ -960,30 +1069,25 @@ enifed('ember-testing/lib/events', ['exports', '@ember/runloop', '@ember/polyfil
     } else {
       event = buildBasicEvent(type, options);
     }
+
     element.dispatchEvent(event);
   }
 
-  function buildBasicEvent(type) {
-    var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+  function buildBasicEvent(type, options = {}) {
+    var event = document.createEvent('Events'); // Event.bubbles is read only
 
-    var event = document.createEvent('Events');
-
-    // Event.bubbles is read only
     var bubbles = options.bubbles !== undefined ? options.bubbles : true;
     var cancelable = options.cancelable !== undefined ? options.cancelable : true;
-
     delete options.bubbles;
     delete options.cancelable;
-
     event.initEvent(type, bubbles, cancelable);
     (0, _polyfills.assign)(event, options);
     return event;
   }
 
-  function buildMouseEvent(type) {
-    var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+  function buildMouseEvent(type, options = {}) {
+    var event;
 
-    var event = void 0;
     try {
       event = document.createEvent('MouseEvents');
       var eventOpts = (0, _polyfills.assign)({}, DEFAULT_EVENT_OPTIONS, options);
@@ -991,13 +1095,13 @@ enifed('ember-testing/lib/events', ['exports', '@ember/runloop', '@ember/polyfil
     } catch (e) {
       event = buildBasicEvent(type, options);
     }
+
     return event;
   }
 
-  function buildKeyboardEvent(type) {
-    var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+  function buildKeyboardEvent(type, options = {}) {
+    var event;
 
-    var event = void 0;
     try {
       event = document.createEvent('KeyEvents');
       var eventOpts = (0, _polyfills.assign)({}, DEFAULT_EVENT_OPTIONS, options);
@@ -1005,11 +1109,12 @@ enifed('ember-testing/lib/events', ['exports', '@ember/runloop', '@ember/polyfil
     } catch (e) {
       event = buildBasicEvent(type, options);
     }
+
     return event;
   }
 });
-enifed('ember-testing/lib/ext/application', ['@ember/application', 'ember-testing/lib/setup_for_testing', 'ember-testing/lib/test/helpers', 'ember-testing/lib/test/promise', 'ember-testing/lib/test/run', 'ember-testing/lib/test/on_inject_helpers', 'ember-testing/lib/test/adapter'], function (_application, _setup_for_testing, _helpers, _promise, _run, _on_inject_helpers, _adapter) {
-  'use strict';
+define("ember-testing/lib/ext/application", ["@ember/application", "ember-testing/lib/setup_for_testing", "ember-testing/lib/test/helpers", "ember-testing/lib/test/promise", "ember-testing/lib/test/run", "ember-testing/lib/test/on_inject_helpers", "ember-testing/lib/test/adapter"], function (_application, _setup_for_testing, _helpers, _promise, _run, _on_inject_helpers, _adapter) {
+  "use strict";
 
   _application.default.reopen({
     /**
@@ -1049,16 +1154,27 @@ enifed('ember-testing/lib/ext/application', ['@ember/application', 'ember-testin
     */
     testing: false,
 
-    setupForTesting: function () {
+    /**
+      This hook defers the readiness of the application, so that you can start
+      the app when your tests are ready to run. It also sets the router's
+      location to 'none', so that the window's location will not be modified
+      (preventing both accidental leaking of state between tests and interference
+      with your testing framework). `setupForTesting` should only be called after
+      setting a custom `router` class (for example `App.Router = Router.extend(`).
+       Example:
+       ```
+      App.setupForTesting();
+      ```
+       @method setupForTesting
+      @public
+    */
+    setupForTesting() {
       (0, _setup_for_testing.default)();
-
       this.testing = true;
-
       this.resolveRegistration('router:main').reopen({
         location: 'none'
       });
     },
-
 
     /**
       This will be used as the container to inject the test helpers into. By
@@ -1071,7 +1187,22 @@ enifed('ember-testing/lib/ext/application', ['@ember/application', 'ember-testin
     */
     helperContainer: null,
 
-    injectTestHelpers: function (helperContainer) {
+    /**
+      This injects the test helpers into the `helperContainer` object. If an object is provided
+      it will be used as the helperContainer. If `helperContainer` is not set it will default
+      to `window`. If a function of the same name has already been defined it will be cached
+      (so that it can be reset if the helper is removed with `unregisterHelper` or
+      `removeTestHelpers`).
+       Any callbacks registered with `onInjectHelpers` will be called once the
+      helpers have been injected.
+       Example:
+      ```
+      App.injectTestHelpers();
+      ```
+       @method injectTestHelpers
+      @public
+    */
+    injectTestHelpers(helperContainer) {
       if (helperContainer) {
         this.helperContainer = helperContainer;
       } else {
@@ -1079,13 +1210,15 @@ enifed('ember-testing/lib/ext/application', ['@ember/application', 'ember-testin
       }
 
       this.reopen({
-        willDestroy: function () {
-          this._super.apply(this, arguments);
+        willDestroy() {
+          this._super(...arguments);
+
           this.removeTestHelpers();
         }
-      });
 
+      });
       this.testHelpers = {};
+
       for (var name in _helpers.helpers) {
         this.originalMethods[name] = this.helperContainer[name];
         this.testHelpers[name] = this.helperContainer[name] = helper(this, name);
@@ -1094,7 +1227,18 @@ enifed('ember-testing/lib/ext/application', ['@ember/application', 'ember-testin
 
       (0, _on_inject_helpers.invokeInjectHelpersCallbacks)(this);
     },
-    removeTestHelpers: function () {
+
+    /**
+      This removes all helpers that have been registered, and resets and functions
+      that were overridden by the helpers.
+       Example:
+       ```javascript
+      App.removeTestHelpers();
+      ```
+       @public
+      @method removeTestHelpers
+    */
+    removeTestHelpers() {
       if (!this.helperContainer) {
         return;
       }
@@ -1106,17 +1250,14 @@ enifed('ember-testing/lib/ext/application', ['@ember/application', 'ember-testin
         delete this.originalMethods[name];
       }
     }
-  });
 
-  // This method is no longer needed
+  }); // This method is no longer needed
   // But still here for backwards compatibility
   // of helper chaining
-  function protoWrap(proto, name, callback, isAsync) {
-    proto[name] = function () {
-      for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
-        args[_key] = arguments[_key];
-      }
 
+
+  function protoWrap(proto, name, callback, isAsync) {
+    proto[name] = function (...args) {
       if (isAsync) {
         return callback.apply(this, args);
       } else {
@@ -1130,58 +1271,49 @@ enifed('ember-testing/lib/ext/application', ['@ember/application', 'ember-testin
   function helper(app, name) {
     var fn = _helpers.helpers[name].method;
     var meta = _helpers.helpers[name].meta;
-    if (!meta.wait) {
-      return function () {
-        for (var _len2 = arguments.length, args = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-          args[_key2] = arguments[_key2];
-        }
 
-        return fn.apply(app, [app].concat(args));
-      };
+    if (!meta.wait) {
+      return (...args) => fn.apply(app, [app, ...args]);
     }
 
-    return function () {
-      for (var _len3 = arguments.length, args = Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
-        args[_key3] = arguments[_key3];
-      }
-
-      var lastPromise = (0, _run.default)(function () {
-        return (0, _promise.resolve)((0, _promise.getLastPromise)());
-      });
-
-      // wait for last helper's promise to resolve and then
+    return (...args) => {
+      var lastPromise = (0, _run.default)(() => (0, _promise.resolve)((0, _promise.getLastPromise)())); // wait for last helper's promise to resolve and then
       // execute. To be safe, we need to tell the adapter we're going
       // asynchronous here, because fn may not be invoked before we
       // return.
+
       (0, _adapter.asyncStart)();
-      return lastPromise.then(function () {
-        return fn.apply(app, [app].concat(args));
-      }).finally(_adapter.asyncEnd);
+      return lastPromise.then(() => fn.apply(app, [app, ...args])).finally(_adapter.asyncEnd);
     };
   }
 });
-enifed('ember-testing/lib/ext/rsvp', ['exports', 'ember-runtime', '@ember/runloop', '@ember/debug', 'ember-testing/lib/test/adapter'], function (exports, _emberRuntime, _runloop, _debug, _adapter) {
-  'use strict';
+define("ember-testing/lib/ext/rsvp", ["exports", "@ember/-internals/runtime", "@ember/runloop", "@ember/debug", "ember-testing/lib/test/adapter"], function (_exports, _runtime, _runloop, _debug, _adapter) {
+  "use strict";
 
-  _emberRuntime.RSVP.configure('async', function (callback, promise) {
+  Object.defineProperty(_exports, "__esModule", {
+    value: true
+  });
+  _exports.default = void 0;
+
+  _runtime.RSVP.configure('async', function (callback, promise) {
     // if schedule will cause autorun, we need to inform adapter
-    if ((0, _debug.isTesting)() && !_runloop.backburner.currentInstance) {
+    if ((0, _debug.isTesting)() && !_runloop._backburner.currentInstance) {
       (0, _adapter.asyncStart)();
-      _runloop.backburner.schedule('actions', function () {
+
+      _runloop._backburner.schedule('actions', () => {
         (0, _adapter.asyncEnd)();
         callback(promise);
       });
     } else {
-      _runloop.backburner.schedule('actions', function () {
-        return callback(promise);
-      });
+      _runloop._backburner.schedule('actions', () => callback(promise));
     }
   });
 
-  exports.default = _emberRuntime.RSVP;
+  var _default = _runtime.RSVP;
+  _exports.default = _default;
 });
-enifed('ember-testing/lib/helpers', ['ember-testing/lib/test/helpers', 'ember-testing/lib/helpers/and_then', 'ember-testing/lib/helpers/click', 'ember-testing/lib/helpers/current_path', 'ember-testing/lib/helpers/current_route_name', 'ember-testing/lib/helpers/current_url', 'ember-testing/lib/helpers/fill_in', 'ember-testing/lib/helpers/find', 'ember-testing/lib/helpers/find_with_assert', 'ember-testing/lib/helpers/key_event', 'ember-testing/lib/helpers/pause_test', 'ember-testing/lib/helpers/trigger_event', 'ember-testing/lib/helpers/visit', 'ember-testing/lib/helpers/wait'], function (_helpers, _and_then, _click, _current_path, _current_route_name, _current_url, _fill_in, _find, _find_with_assert, _key_event, _pause_test, _trigger_event, _visit, _wait) {
-  'use strict';
+define("ember-testing/lib/helpers", ["ember-testing/lib/test/helpers", "ember-testing/lib/helpers/and_then", "ember-testing/lib/helpers/click", "ember-testing/lib/helpers/current_path", "ember-testing/lib/helpers/current_route_name", "ember-testing/lib/helpers/current_url", "ember-testing/lib/helpers/fill_in", "ember-testing/lib/helpers/find", "ember-testing/lib/helpers/find_with_assert", "ember-testing/lib/helpers/key_event", "ember-testing/lib/helpers/pause_test", "ember-testing/lib/helpers/trigger_event", "ember-testing/lib/helpers/visit", "ember-testing/lib/helpers/wait"], function (_helpers, _and_then, _click, _current_path, _current_route_name, _current_url, _fill_in, _find, _find_with_assert, _key_event, _pause_test, _trigger_event, _visit, _wait) {
+  "use strict";
 
   (0, _helpers.registerAsyncHelper)('visit', _visit.default);
   (0, _helpers.registerAsyncHelper)('click', _click.default);
@@ -1191,7 +1323,6 @@ enifed('ember-testing/lib/helpers', ['ember-testing/lib/test/helpers', 'ember-te
   (0, _helpers.registerAsyncHelper)('andThen', _and_then.default);
   (0, _helpers.registerAsyncHelper)('pauseTest', _pause_test.pauseTest);
   (0, _helpers.registerAsyncHelper)('triggerEvent', _trigger_event.default);
-
   (0, _helpers.registerHelper)('find', _find.default);
   (0, _helpers.registerHelper)('findWithAssert', _find_with_assert.default);
   (0, _helpers.registerHelper)('currentRouteName', _current_route_name.default);
@@ -1199,21 +1330,25 @@ enifed('ember-testing/lib/helpers', ['ember-testing/lib/test/helpers', 'ember-te
   (0, _helpers.registerHelper)('currentURL', _current_url.default);
   (0, _helpers.registerHelper)('resumeTest', _pause_test.resumeTest);
 });
-enifed('ember-testing/lib/helpers/-is-form-control', ['exports'], function (exports) {
-  'use strict';
+define("ember-testing/lib/helpers/-is-form-control", ["exports"], function (_exports) {
+  "use strict";
 
-  exports.default = isFormControl;
+  Object.defineProperty(_exports, "__esModule", {
+    value: true
+  });
+  _exports.default = isFormControl;
   var FORM_CONTROL_TAGS = ['INPUT', 'BUTTON', 'SELECT', 'TEXTAREA'];
-
   /**
     @private
     @param {Element} element the element to check
     @returns {boolean} `true` when the element is a form control, `false` otherwise
   */
-  function isFormControl(element) {
-    var tagName = element.tagName,
-        type = element.type;
 
+  function isFormControl(element) {
+    var {
+      tagName,
+      type
+    } = element;
 
     if (type === 'hidden') {
       return false;
@@ -1222,19 +1357,29 @@ enifed('ember-testing/lib/helpers/-is-form-control', ['exports'], function (expo
     return FORM_CONTROL_TAGS.indexOf(tagName) > -1;
   }
 });
-enifed("ember-testing/lib/helpers/and_then", ["exports"], function (exports) {
+define("ember-testing/lib/helpers/and_then", ["exports"], function (_exports) {
   "use strict";
 
-  exports.default = andThen;
+  Object.defineProperty(_exports, "__esModule", {
+    value: true
+  });
+  _exports.default = andThen;
+
   function andThen(app, callback) {
     return app.testHelpers.wait(callback(app));
   }
 });
-enifed('ember-testing/lib/helpers/click', ['exports', 'ember-testing/lib/events'], function (exports, _events) {
-  'use strict';
+define("ember-testing/lib/helpers/click", ["exports", "ember-testing/lib/events"], function (_exports, _events) {
+  "use strict";
 
-  exports.default = click;
+  Object.defineProperty(_exports, "__esModule", {
+    value: true
+  });
+  _exports.default = click;
 
+  /**
+  @module ember
+  */
 
   /**
     Clicks an element and triggers any actions triggered by the element's `click`
@@ -1257,24 +1402,24 @@ enifed('ember-testing/lib/helpers/click', ['exports', 'ember-testing/lib/events'
   function click(app, selector, context) {
     var $el = app.testHelpers.findWithAssert(selector, context);
     var el = $el[0];
-
     (0, _events.fireEvent)(el, 'mousedown');
-
     (0, _events.focus)(el);
-
     (0, _events.fireEvent)(el, 'mouseup');
     (0, _events.fireEvent)(el, 'click');
-
     return app.testHelpers.wait();
-  } /**
-    @module ember
-    */
+  }
 });
-enifed('ember-testing/lib/helpers/current_path', ['exports', 'ember-metal'], function (exports, _emberMetal) {
-  'use strict';
+define("ember-testing/lib/helpers/current_path", ["exports", "@ember/-internals/metal"], function (_exports, _metal) {
+  "use strict";
 
-  exports.default = currentPath;
+  Object.defineProperty(_exports, "__esModule", {
+    value: true
+  });
+  _exports.default = currentPath;
 
+  /**
+  @module ember
+  */
 
   /**
     Returns the current path.
@@ -1296,15 +1441,21 @@ enifed('ember-testing/lib/helpers/current_path', ['exports', 'ember-metal'], fun
   */
   function currentPath(app) {
     var routingService = app.__container__.lookup('service:-routing');
-    return (0, _emberMetal.get)(routingService, 'currentPath');
-  } /**
-    @module ember
-    */
-});
-enifed('ember-testing/lib/helpers/current_route_name', ['exports', 'ember-metal'], function (exports, _emberMetal) {
-  'use strict';
 
-  exports.default = currentRouteName;
+    return (0, _metal.get)(routingService, 'currentPath');
+  }
+});
+define("ember-testing/lib/helpers/current_route_name", ["exports", "@ember/-internals/metal"], function (_exports, _metal) {
+  "use strict";
+
+  Object.defineProperty(_exports, "__esModule", {
+    value: true
+  });
+  _exports.default = currentRouteName;
+
+  /**
+  @module ember
+  */
 
   /**
     Returns the currently active route name.
@@ -1325,16 +1476,21 @@ enifed('ember-testing/lib/helpers/current_route_name', ['exports', 'ember-metal'
   */
   function currentRouteName(app) {
     var routingService = app.__container__.lookup('service:-routing');
-    return (0, _emberMetal.get)(routingService, 'currentRouteName');
-  } /**
-    @module ember
-    */
+
+    return (0, _metal.get)(routingService, 'currentRouteName');
+  }
 });
-enifed('ember-testing/lib/helpers/current_url', ['exports', 'ember-metal'], function (exports, _emberMetal) {
-  'use strict';
+define("ember-testing/lib/helpers/current_url", ["exports", "@ember/-internals/metal"], function (_exports, _metal) {
+  "use strict";
 
-  exports.default = currentURL;
+  Object.defineProperty(_exports, "__esModule", {
+    value: true
+  });
+  _exports.default = currentURL;
 
+  /**
+  @module ember
+  */
 
   /**
     Returns the current URL.
@@ -1356,16 +1512,21 @@ enifed('ember-testing/lib/helpers/current_url', ['exports', 'ember-metal'], func
   */
   function currentURL(app) {
     var router = app.__container__.lookup('router:main');
-    return (0, _emberMetal.get)(router, 'location').getURL();
-  } /**
-    @module ember
-    */
+
+    return (0, _metal.get)(router, 'location').getURL();
+  }
 });
-enifed('ember-testing/lib/helpers/fill_in', ['exports', 'ember-testing/lib/events', 'ember-testing/lib/helpers/-is-form-control'], function (exports, _events, _isFormControl) {
-  'use strict';
+define("ember-testing/lib/helpers/fill_in", ["exports", "ember-testing/lib/events", "ember-testing/lib/helpers/-is-form-control"], function (_exports, _events, _isFormControl) {
+  "use strict";
 
-  exports.default = fillIn;
+  Object.defineProperty(_exports, "__esModule", {
+    value: true
+  });
+  _exports.default = fillIn;
 
+  /**
+  @module ember
+  */
 
   /**
     Fills in an input element with some text.
@@ -1385,18 +1546,15 @@ enifed('ember-testing/lib/helpers/fill_in', ['exports', 'ember-testing/lib/event
     @return {RSVP.Promise<undefined>}
     @public
   */
-  /**
-  @module ember
-  */
   function fillIn(app, selector, contextOrText, text) {
-    var $el = void 0,
-        el = void 0,
-        context = void 0;
+    var $el, el, context;
+
     if (text === undefined) {
       text = contextOrText;
     } else {
       context = contextOrText;
     }
+
     $el = app.testHelpers.findWithAssert(selector, context);
     el = $el[0];
     (0, _events.focus)(el);
@@ -1409,15 +1567,20 @@ enifed('ember-testing/lib/helpers/fill_in', ['exports', 'ember-testing/lib/event
 
     (0, _events.fireEvent)(el, 'input');
     (0, _events.fireEvent)(el, 'change');
-
     return app.testHelpers.wait();
   }
 });
-enifed('ember-testing/lib/helpers/find', ['exports', 'ember-metal', '@ember/debug', 'ember-views'], function (exports, _emberMetal, _debug, _emberViews) {
-  'use strict';
+define("ember-testing/lib/helpers/find", ["exports", "@ember/-internals/metal", "@ember/debug", "@ember/-internals/views"], function (_exports, _metal, _debug, _views) {
+  "use strict";
 
-  exports.default = find;
+  Object.defineProperty(_exports, "__esModule", {
+    value: true
+  });
+  _exports.default = find;
 
+  /**
+  @module ember
+  */
 
   /**
     Finds an element in the context of the app's container element. A simple alias
@@ -1443,24 +1606,28 @@ enifed('ember-testing/lib/helpers/find', ['exports', 'ember-metal', '@ember/debu
     @public
   */
   function find(app, selector, context) {
-    if (_emberViews.jQueryDisabled) {
+    if (_views.jQueryDisabled) {
       (true && !(false) && (0, _debug.assert)('If jQuery is disabled, please import and use helpers from @ember/test-helpers [https://github.com/emberjs/ember-test-helpers]. Note: `find` is not an available helper.'));
     }
-    var $el = void 0;
-    context = context || (0, _emberMetal.get)(app, 'rootElement');
+
+    var $el;
+    context = context || (0, _metal.get)(app, 'rootElement');
     $el = app.$(selector, context);
     return $el;
-  } /**
-    @module ember
-    */
+  }
 });
-enifed('ember-testing/lib/helpers/find_with_assert', ['exports'], function (exports) {
-  'use strict';
+define("ember-testing/lib/helpers/find_with_assert", ["exports"], function (_exports) {
+  "use strict";
 
-  exports.default = findWithAssert;
+  Object.defineProperty(_exports, "__esModule", {
+    value: true
+  });
+  _exports.default = findWithAssert;
+
   /**
   @module ember
   */
+
   /**
     Like `find`, but throws an error if the element selector returns no results.
   
@@ -1487,19 +1654,26 @@ enifed('ember-testing/lib/helpers/find_with_assert', ['exports'], function (expo
   */
   function findWithAssert(app, selector, context) {
     var $el = app.testHelpers.find(selector, context);
+
     if ($el.length === 0) {
       throw new Error('Element ' + selector + ' not found.');
     }
+
     return $el;
   }
 });
-enifed("ember-testing/lib/helpers/key_event", ["exports"], function (exports) {
+define("ember-testing/lib/helpers/key_event", ["exports"], function (_exports) {
   "use strict";
 
-  exports.default = keyEvent;
+  Object.defineProperty(_exports, "__esModule", {
+    value: true
+  });
+  _exports.default = keyEvent;
+
   /**
   @module ember
   */
+
   /**
     Simulates a key event, e.g. `keypress`, `keydown`, `keyup` with the desired keyCode
     Example:
@@ -1517,8 +1691,7 @@ enifed("ember-testing/lib/helpers/key_event", ["exports"], function (exports) {
     @public
   */
   function keyEvent(app, selector, contextOrType, typeOrKeyCode, keyCode) {
-    var context = void 0,
-        type = void 0;
+    var context, type;
 
     if (keyCode === undefined) {
       context = null;
@@ -1530,21 +1703,24 @@ enifed("ember-testing/lib/helpers/key_event", ["exports"], function (exports) {
     }
 
     return app.testHelpers.triggerEvent(selector, context, type, {
-      keyCode: keyCode,
+      keyCode,
       which: keyCode
     });
   }
 });
-enifed('ember-testing/lib/helpers/pause_test', ['exports', 'ember-runtime', '@ember/debug'], function (exports, _emberRuntime, _debug) {
-  'use strict';
+define("ember-testing/lib/helpers/pause_test", ["exports", "@ember/-internals/runtime", "@ember/debug"], function (_exports, _runtime, _debug) {
+  "use strict";
 
-  exports.resumeTest = resumeTest;
-  exports.pauseTest = pauseTest;
+  Object.defineProperty(_exports, "__esModule", {
+    value: true
+  });
+  _exports.resumeTest = resumeTest;
+  _exports.pauseTest = pauseTest;
+
   /**
   @module ember
   */
-  var resume = void 0;
-
+  var resume;
   /**
    Resumes a test paused by `pauseTest`.
   
@@ -1552,13 +1728,12 @@ enifed('ember-testing/lib/helpers/pause_test', ['exports', 'ember-runtime', '@em
    @return {void}
    @public
   */
+
   function resumeTest() {
     (true && !(resume) && (0, _debug.assert)('Testing has not been paused. There is nothing to resume.', resume));
-
     resume();
     resume = undefined;
   }
-
   /**
    Pauses the current test - this is useful for debugging while testing or for test-driving.
    It allows you to inspect the state of your application at any point.
@@ -1572,7 +1747,7 @@ enifed('ember-testing/lib/helpers/pause_test', ['exports', 'ember-runtime', '@em
   
    You may want to turn off the timeout before pausing.
   
-   qunit (as of 2.4.0):
+   qunit (timeout available to use as of 2.4.0):
   
    ```
    visit('/');
@@ -1581,7 +1756,7 @@ enifed('ember-testing/lib/helpers/pause_test', ['exports', 'ember-runtime', '@em
    click('.btn');
    ```
   
-   mocha:
+   mocha (timeout happens automatically as of ember-mocha v0.14.0):
   
    ```
    visit('/');
@@ -1596,18 +1771,26 @@ enifed('ember-testing/lib/helpers/pause_test', ['exports', 'ember-runtime', '@em
    @return {Object} A promise that will never resolve
    @public
   */
+
+
   function pauseTest() {
     (0, _debug.info)('Testing paused. Use `resumeTest()` to continue.');
-
-    return new _emberRuntime.RSVP.Promise(function (resolve) {
+    return new _runtime.RSVP.Promise(resolve => {
       resume = resolve;
     }, 'TestAdapter paused promise');
   }
 });
-enifed('ember-testing/lib/helpers/trigger_event', ['exports', 'ember-testing/lib/events'], function (exports, _events) {
-  'use strict';
+define("ember-testing/lib/helpers/trigger_event", ["exports", "ember-testing/lib/events"], function (_exports, _events) {
+  "use strict";
 
-  exports.default = triggerEvent;
+  Object.defineProperty(_exports, "__esModule", {
+    value: true
+  });
+  _exports.default = triggerEvent;
+
+  /**
+  @module ember
+  */
 
   /**
     Triggers the given DOM event on the element identified by the provided selector.
@@ -1631,9 +1814,7 @@ enifed('ember-testing/lib/helpers/trigger_event', ['exports', 'ember-testing/lib
   */
   function triggerEvent(app, selector, contextOrType, typeOrOptions, possibleOptions) {
     var arity = arguments.length;
-    var context = void 0,
-        type = void 0,
-        options = void 0;
+    var context, type, options;
 
     if (arity === 3) {
       // context and options are optional, so this is
@@ -1664,19 +1845,17 @@ enifed('ember-testing/lib/helpers/trigger_event', ['exports', 'ember-testing/lib
 
     var $el = app.testHelpers.findWithAssert(selector, context);
     var el = $el[0];
-
     (0, _events.fireEvent)(el, type, options);
-
     return app.testHelpers.wait();
-  } /**
-    @module ember
-    */
+  }
 });
-enifed('ember-testing/lib/helpers/visit', ['exports', '@ember/runloop'], function (exports, _runloop) {
-  'use strict';
+define("ember-testing/lib/helpers/visit", ["exports", "@ember/runloop"], function (_exports, _runloop) {
+  "use strict";
 
-  exports.default = visit;
-
+  Object.defineProperty(_exports, "__esModule", {
+    value: true
+  });
+  _exports.default = visit;
 
   /**
     Loads a route, sets up any controllers, and renders any templates associated
@@ -1698,9 +1877,9 @@ enifed('ember-testing/lib/helpers/visit', ['exports', '@ember/runloop'], functio
   */
   function visit(app, url) {
     var router = app.__container__.lookup('router:main');
-    var shouldHandleURL = false;
 
-    app.boot().then(function () {
+    var shouldHandleURL = false;
+    app.boot().then(() => {
       router.location.setURL(url);
 
       if (shouldHandleURL) {
@@ -1709,9 +1888,9 @@ enifed('ember-testing/lib/helpers/visit', ['exports', '@ember/runloop'], functio
     });
 
     if (app._readinessDeferrals > 0) {
-      router['initialURL'] = url;
+      router.initialURL = url;
       (0, _runloop.run)(app, 'advanceReadiness');
-      delete router['initialURL'];
+      delete router.initialURL;
     } else {
       shouldHandleURL = true;
     }
@@ -1719,11 +1898,17 @@ enifed('ember-testing/lib/helpers/visit', ['exports', '@ember/runloop'], functio
     return app.testHelpers.wait();
   }
 });
-enifed('ember-testing/lib/helpers/wait', ['exports', 'ember-testing/lib/test/waiters', 'ember-runtime', '@ember/runloop', 'ember-testing/lib/test/pending_requests'], function (exports, _waiters, _emberRuntime, _runloop, _pending_requests) {
-  'use strict';
+define("ember-testing/lib/helpers/wait", ["exports", "ember-testing/lib/test/waiters", "@ember/-internals/runtime", "@ember/runloop", "ember-testing/lib/test/pending_requests"], function (_exports, _waiters, _runtime, _runloop, _pending_requests) {
+  "use strict";
 
-  exports.default = wait;
+  Object.defineProperty(_exports, "__esModule", {
+    value: true
+  });
+  _exports.default = wait;
 
+  /**
+  @module ember
+  */
 
   /**
     Causes the run loop to process any pending events. This is used to ensure that
@@ -1755,68 +1940,69 @@ enifed('ember-testing/lib/helpers/wait', ['exports', 'ember-testing/lib/test/wai
     @public
     @since 1.0.0
   */
-  /**
-  @module ember
-  */
   function wait(app, value) {
-    return new _emberRuntime.RSVP.Promise(function (resolve) {
-      var router = app.__container__.lookup('router:main');
+    return new _runtime.RSVP.Promise(function (resolve) {
+      var router = app.__container__.lookup('router:main'); // Every 10ms, poll for the async thing to have finished
 
-      // Every 10ms, poll for the async thing to have finished
-      var watcher = setInterval(function () {
+
+      var watcher = setInterval(() => {
         // 1. If the router is loading, keep polling
-        var routerIsLoading = router._routerMicrolib && !!router._routerMicrolib.activeTransition;
+        var routerIsLoading = router._routerMicrolib && Boolean(router._routerMicrolib.activeTransition);
+
         if (routerIsLoading) {
           return;
-        }
+        } // 2. If there are pending Ajax requests, keep polling
 
-        // 2. If there are pending Ajax requests, keep polling
+
         if ((0, _pending_requests.pendingRequests)()) {
           return;
-        }
+        } // 3. If there are scheduled timers or we are inside of a run loop, keep polling
 
-        // 3. If there are scheduled timers or we are inside of a run loop, keep polling
-        if ((0, _runloop.hasScheduledTimers)() || (0, _runloop.getCurrentRunLoop)()) {
+
+        if ((0, _runloop._hasScheduledTimers)() || (0, _runloop._getCurrentRunLoop)()) {
           return;
         }
 
         if ((0, _waiters.checkWaiters)()) {
           return;
-        }
+        } // Stop polling
 
-        // Stop polling
-        clearInterval(watcher);
 
-        // Synchronously resolve the promise
+        clearInterval(watcher); // Synchronously resolve the promise
+
         (0, _runloop.run)(null, resolve, value);
       }, 10);
     });
   }
 });
-enifed('ember-testing/lib/initializers', ['@ember/application'], function (_application) {
-  'use strict';
+define("ember-testing/lib/initializers", ["@ember/application"], function (_application) {
+  "use strict";
 
   var name = 'deferReadiness in `testing` mode';
-
   (0, _application.onLoad)('Ember.Application', function (Application) {
     if (!Application.initializers[name]) {
       Application.initializer({
         name: name,
 
-        initialize: function (application) {
+        initialize(application) {
           if (application.testing) {
             application.deferReadiness();
           }
         }
+
       });
     }
   });
 });
-enifed('ember-testing/lib/setup_for_testing', ['exports', '@ember/debug', 'ember-views', 'ember-testing/lib/test/adapter', 'ember-testing/lib/test/pending_requests', 'ember-testing/lib/adapters/adapter', 'ember-testing/lib/adapters/qunit'], function (exports, _debug, _emberViews, _adapter, _pending_requests, _adapter2, _qunit) {
-  'use strict';
+define("ember-testing/lib/setup_for_testing", ["exports", "@ember/debug", "@ember/-internals/views", "ember-testing/lib/test/adapter", "ember-testing/lib/test/pending_requests", "ember-testing/lib/adapters/adapter", "ember-testing/lib/adapters/qunit"], function (_exports, _debug, _views, _adapter, _pending_requests, _adapter2, _qunit) {
+  "use strict";
 
-  exports.default = setupForTesting;
+  Object.defineProperty(_exports, "__esModule", {
+    value: true
+  });
+  _exports.default = setupForTesting;
 
+  /* global self */
 
   /**
     Sets Ember up for testing. This is useful to perform
@@ -1830,37 +2016,30 @@ enifed('ember-testing/lib/setup_for_testing', ['exports', '@ember/debug', 'ember
     @since 1.5.0
     @private
   */
-  /* global self */
-
   function setupForTesting() {
     (0, _debug.setTesting)(true);
+    var adapter = (0, _adapter.getAdapter)(); // if adapter is not manually set default to QUnit
 
-    var adapter = (0, _adapter.getAdapter)();
-    // if adapter is not manually set default to QUnit
     if (!adapter) {
-      (0, _adapter.setAdapter)(typeof self.QUnit === 'undefined' ? new _adapter2.default() : new _qunit.default());
+      (0, _adapter.setAdapter)(typeof self.QUnit === 'undefined' ? _adapter2.default.create() : _qunit.default.create());
     }
 
-    if (!_emberViews.jQueryDisabled) {
-      (0, _emberViews.jQuery)(document).off('ajaxSend', _pending_requests.incrementPendingRequests);
-      (0, _emberViews.jQuery)(document).off('ajaxComplete', _pending_requests.decrementPendingRequests);
-
+    if (!_views.jQueryDisabled) {
+      (0, _views.jQuery)(document).off('ajaxSend', _pending_requests.incrementPendingRequests);
+      (0, _views.jQuery)(document).off('ajaxComplete', _pending_requests.decrementPendingRequests);
       (0, _pending_requests.clearPendingRequests)();
-
-      (0, _emberViews.jQuery)(document).on('ajaxSend', _pending_requests.incrementPendingRequests);
-      (0, _emberViews.jQuery)(document).on('ajaxComplete', _pending_requests.decrementPendingRequests);
+      (0, _views.jQuery)(document).on('ajaxSend', _pending_requests.incrementPendingRequests);
+      (0, _views.jQuery)(document).on('ajaxComplete', _pending_requests.decrementPendingRequests);
     }
   }
 });
-enifed('ember-testing/lib/support', ['@ember/debug', 'ember-views', 'ember-browser-environment'], function (_debug, _emberViews, _emberBrowserEnvironment) {
-  'use strict';
+define("ember-testing/lib/support", ["@ember/debug", "@ember/-internals/views", "@ember/-internals/browser-environment"], function (_debug, _views, _browserEnvironment) {
+  "use strict";
 
   /**
     @module ember
   */
-
-  var $ = _emberViews.jQuery;
-
+  var $ = _views.jQuery;
   /**
     This method creates a checkbox and triggers the click event to fire the
     passed in handler. It is used to correct for a bug in older versions
@@ -1869,12 +2048,17 @@ enifed('ember-testing/lib/support', ['@ember/debug', 'ember-views', 'ember-brows
     @private
     @method testCheckboxClick
   */
+
   function testCheckboxClick(handler) {
     var input = document.createElement('input');
-    $(input).attr('type', 'checkbox').css({ position: 'absolute', left: '-1000px', top: '-1000px' }).appendTo('body').on('click', handler).trigger('click').remove();
+    $(input).attr('type', 'checkbox').css({
+      position: 'absolute',
+      left: '-1000px',
+      top: '-1000px'
+    }).appendTo('body').on('click', handler).trigger('click').remove();
   }
 
-  if (_emberBrowserEnvironment.hasDOM && !_emberViews.jQueryDisabled) {
+  if (_browserEnvironment.hasDOM && !_views.jQueryDisabled) {
     $(function () {
       /*
         Determine whether a checkbox checked using jQuery's "click" method will have
@@ -1886,17 +2070,18 @@ enifed('ember-testing/lib/support', ['@ember/debug', 'ember-views', 'ember-brows
       testCheckboxClick(function () {
         if (!this.checked && !$.event.special.click) {
           $.event.special.click = {
-            trigger: function () {
+            // For checkbox, fire native event so checked state will be right
+            trigger() {
               if (this.nodeName === 'INPUT' && this.type === 'checkbox' && this.click) {
                 this.click();
                 return false;
               }
             }
+
           };
         }
-      });
+      }); // Try again to verify that the patch took effect or blow up.
 
-      // Try again to verify that the patch took effect or blow up.
       testCheckboxClick(function () {
         (true && (0, _debug.warn)("clicked checkboxes should be checked! the jQuery patch didn't work", this.checked, {
           id: 'ember-testing.test-checkbox-click'
@@ -1905,8 +2090,17 @@ enifed('ember-testing/lib/support', ['@ember/debug', 'ember-views', 'ember-brows
     });
   }
 });
-enifed('ember-testing/lib/test', ['exports', 'ember-testing/lib/test/helpers', 'ember-testing/lib/test/on_inject_helpers', 'ember-testing/lib/test/promise', 'ember-testing/lib/test/waiters', 'ember-testing/lib/test/adapter'], function (exports, _helpers, _on_inject_helpers, _promise, _waiters, _adapter) {
-  'use strict';
+define("ember-testing/lib/test", ["exports", "ember-testing/lib/test/helpers", "ember-testing/lib/test/on_inject_helpers", "ember-testing/lib/test/promise", "ember-testing/lib/test/waiters", "ember-testing/lib/test/adapter"], function (_exports, _helpers, _on_inject_helpers, _promise, _waiters, _adapter) {
+  "use strict";
+
+  Object.defineProperty(_exports, "__esModule", {
+    value: true
+  });
+  _exports.default = void 0;
+
+  /**
+    @module ember
+  */
 
   /**
     This is a container for an assortment of testing related functionality:
@@ -1928,7 +2122,6 @@ enifed('ember-testing/lib/test', ['exports', 'ember-testing/lib/test/helpers', '
       @since 1.7.0
     */
     _helpers: _helpers.helpers,
-
     registerHelper: _helpers.registerHelper,
     registerAsyncHelper: _helpers.registerAsyncHelper,
     unregisterHelper: _helpers.unregisterHelper,
@@ -1940,7 +2133,6 @@ enifed('ember-testing/lib/test', ['exports', 'ember-testing/lib/test/helpers', '
     unregisterWaiter: _waiters.unregisterWaiter,
     checkWaiters: _waiters.checkWaiters
   };
-
   /**
    Used to allow ember-testing to communicate with a specific testing
    framework.
@@ -1961,36 +2153,37 @@ enifed('ember-testing/lib/test', ['exports', 'ember-testing/lib/test/helpers', '
    @type {Class} The adapter to be used.
    @default Ember.Test.QUnitAdapter
   */
-  /**
-    @module ember
-  */
+
   Object.defineProperty(Test, 'adapter', {
     get: _adapter.getAdapter,
     set: _adapter.setAdapter
   });
-
-  exports.default = Test;
+  var _default = Test;
+  _exports.default = _default;
 });
-enifed('ember-testing/lib/test/adapter', ['exports', 'ember-error-handling'], function (exports, _emberErrorHandling) {
-  'use strict';
+define("ember-testing/lib/test/adapter", ["exports", "@ember/-internals/error-handling"], function (_exports, _errorHandling) {
+  "use strict";
 
-  exports.getAdapter = getAdapter;
-  exports.setAdapter = setAdapter;
-  exports.asyncStart = asyncStart;
-  exports.asyncEnd = asyncEnd;
+  Object.defineProperty(_exports, "__esModule", {
+    value: true
+  });
+  _exports.getAdapter = getAdapter;
+  _exports.setAdapter = setAdapter;
+  _exports.asyncStart = asyncStart;
+  _exports.asyncEnd = asyncEnd;
+  var adapter;
 
-
-  var adapter = void 0;
   function getAdapter() {
     return adapter;
   }
 
   function setAdapter(value) {
     adapter = value;
+
     if (value && typeof value.exception === 'function') {
-      (0, _emberErrorHandling.setDispatchOverride)(adapterDispatch);
+      (0, _errorHandling.setDispatchOverride)(adapterDispatch);
     } else {
-      (0, _emberErrorHandling.setDispatchOverride)(null);
+      (0, _errorHandling.setDispatchOverride)(null);
     }
   }
 
@@ -2008,18 +2201,20 @@ enifed('ember-testing/lib/test/adapter', ['exports', 'ember-error-handling'], fu
 
   function adapterDispatch(error) {
     adapter.exception(error);
-
     console.error(error.stack); // eslint-disable-line no-console
   }
 });
-enifed('ember-testing/lib/test/helpers', ['exports', 'ember-testing/lib/test/promise'], function (exports, _promise) {
-  'use strict';
+define("ember-testing/lib/test/helpers", ["exports", "ember-testing/lib/test/promise"], function (_exports, _promise) {
+  "use strict";
 
-  exports.helpers = undefined;
-  exports.registerHelper = registerHelper;
-  exports.registerAsyncHelper = registerAsyncHelper;
-  exports.unregisterHelper = unregisterHelper;
-  var helpers = exports.helpers = {};
+  Object.defineProperty(_exports, "__esModule", {
+    value: true
+  });
+  _exports.registerHelper = registerHelper;
+  _exports.registerAsyncHelper = registerAsyncHelper;
+  _exports.unregisterHelper = unregisterHelper;
+  _exports.helpers = void 0;
+  var helpers = {};
   /**
    @module @ember/test
   */
@@ -2061,13 +2256,17 @@ enifed('ember-testing/lib/test/helpers', ['exports', 'ember-testing/lib/test/pro
     @param {Function} helperMethod
     @param options {Object}
   */
+
+  _exports.helpers = helpers;
+
   function registerHelper(name, helperMethod) {
     helpers[name] = {
       method: helperMethod,
-      meta: { wait: false }
+      meta: {
+        wait: false
+      }
     };
   }
-
   /**
     `registerAsyncHelper` is used to register an async test helper that will be injected
     when `App.injectTestHelpers` is called.
@@ -2114,13 +2313,16 @@ enifed('ember-testing/lib/test/helpers', ['exports', 'ember-testing/lib/test/pro
     @param {Function} helperMethod
     @since 1.2.0
   */
+
+
   function registerAsyncHelper(name, helperMethod) {
     helpers[name] = {
       method: helperMethod,
-      meta: { wait: true }
+      meta: {
+        wait: true
+      }
     };
   }
-
   /**
     Remove a previously added helper method.
   
@@ -2138,18 +2340,23 @@ enifed('ember-testing/lib/test/helpers', ['exports', 'ember-testing/lib/test/pro
     @for @ember/test
     @param {String} name The helper to remove.
   */
+
+
   function unregisterHelper(name) {
     delete helpers[name];
     delete _promise.default.prototype[name];
   }
 });
-enifed("ember-testing/lib/test/on_inject_helpers", ["exports"], function (exports) {
+define("ember-testing/lib/test/on_inject_helpers", ["exports"], function (_exports) {
   "use strict";
 
-  exports.onInjectHelpers = onInjectHelpers;
-  exports.invokeInjectHelpersCallbacks = invokeInjectHelpersCallbacks;
-  var callbacks = exports.callbacks = [];
-
+  Object.defineProperty(_exports, "__esModule", {
+    value: true
+  });
+  _exports.onInjectHelpers = onInjectHelpers;
+  _exports.invokeInjectHelpersCallbacks = invokeInjectHelpersCallbacks;
+  _exports.callbacks = void 0;
+  var callbacks = [];
   /**
     Used to register callbacks to be fired whenever `App.injectTestHelpers`
     is called.
@@ -2177,6 +2384,9 @@ enifed("ember-testing/lib/test/on_inject_helpers", ["exports"], function (export
     @method onInjectHelpers
     @param {Function} callback The function to be called.
   */
+
+  _exports.callbacks = callbacks;
+
   function onInjectHelpers(callback) {
     callbacks.push(callback);
   }
@@ -2187,13 +2397,16 @@ enifed("ember-testing/lib/test/on_inject_helpers", ["exports"], function (export
     }
   }
 });
-enifed("ember-testing/lib/test/pending_requests", ["exports"], function (exports) {
+define("ember-testing/lib/test/pending_requests", ["exports"], function (_exports) {
   "use strict";
 
-  exports.pendingRequests = pendingRequests;
-  exports.clearPendingRequests = clearPendingRequests;
-  exports.incrementPendingRequests = incrementPendingRequests;
-  exports.decrementPendingRequests = decrementPendingRequests;
+  Object.defineProperty(_exports, "__esModule", {
+    value: true
+  });
+  _exports.pendingRequests = pendingRequests;
+  _exports.clearPendingRequests = clearPendingRequests;
+  _exports.incrementPendingRequests = incrementPendingRequests;
+  _exports.decrementPendingRequests = decrementPendingRequests;
   var requests = [];
 
   function pendingRequests() {
@@ -2219,48 +2432,30 @@ enifed("ember-testing/lib/test/pending_requests", ["exports"], function (exports
     }, 0);
   }
 });
-enifed('ember-testing/lib/test/promise', ['exports', 'ember-babel', 'ember-runtime', 'ember-testing/lib/test/run'], function (exports, _emberBabel, _emberRuntime, _run) {
-  'use strict';
+define("ember-testing/lib/test/promise", ["exports", "@ember/-internals/runtime", "ember-testing/lib/test/run"], function (_exports, _runtime, _run) {
+  "use strict";
 
-  exports.promise = promise;
-  exports.resolve = resolve;
-  exports.getLastPromise = getLastPromise;
+  Object.defineProperty(_exports, "__esModule", {
+    value: true
+  });
+  _exports.promise = promise;
+  _exports.resolve = resolve;
+  _exports.getLastPromise = getLastPromise;
+  _exports.default = void 0;
+  var lastPromise;
 
-
-  var lastPromise = void 0;
-
-  var TestPromise = function (_RSVP$Promise) {
-    (0, _emberBabel.inherits)(TestPromise, _RSVP$Promise);
-
-    function TestPromise() {
-      (0, _emberBabel.classCallCheck)(this, TestPromise);
-
-      var _this = (0, _emberBabel.possibleConstructorReturn)(this, _RSVP$Promise.apply(this, arguments));
-
-      lastPromise = _this;
-      return _this;
+  class TestPromise extends _runtime.RSVP.Promise {
+    constructor() {
+      super(...arguments);
+      lastPromise = this;
     }
 
-    TestPromise.prototype.then = function then(_onFulfillment) {
-      var _RSVP$Promise$prototy;
+    then(_onFulfillment, ...args) {
+      var onFulfillment = typeof _onFulfillment === 'function' ? result => isolate(_onFulfillment, result) : undefined;
+      return super.then(onFulfillment, ...args);
+    }
 
-      var onFulfillment = typeof _onFulfillment === 'function' ? function (result) {
-        return isolate(_onFulfillment, result);
-      } : undefined;
-
-      for (var _len = arguments.length, args = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
-        args[_key - 1] = arguments[_key];
-      }
-
-      return (_RSVP$Promise$prototy = _RSVP$Promise.prototype.then).call.apply(_RSVP$Promise$prototy, [this, onFulfillment].concat(args));
-    };
-
-    return TestPromise;
-  }(_emberRuntime.RSVP.Promise);
-
-  exports.default = TestPromise;
-
-
+  }
   /**
     This returns a thenable tailored for testing.  It catches failed
     `onSuccess` callbacks and invokes the `Ember.Test.adapter.exception`
@@ -2274,11 +2469,14 @@ enifed('ember-testing/lib/test/promise', ['exports', 'ember-babel', 'ember-runti
     @param {Function} resolver The function used to resolve the promise.
     @param {String} label An optional string for identifying the promise.
   */
+
+
+  _exports.default = TestPromise;
+
   function promise(resolver, label) {
-    var fullLabel = 'Ember.Test.promise: ' + (label || '<Unknown Promise>');
+    var fullLabel = `Ember.Test.promise: ${label || '<Unknown Promise>'}`;
     return new TestPromise(resolver, fullLabel);
   }
-
   /**
     Replacement for `Ember.RSVP.resolve`
     The only difference is this uses
@@ -2290,67 +2488,69 @@ enifed('ember-testing/lib/test/promise', ['exports', 'ember-babel', 'ember-runti
     @param {Mixed} The value to resolve
     @since 1.2.0
   */
+
+
   function resolve(result, label) {
     return TestPromise.resolve(result, label);
   }
 
   function getLastPromise() {
     return lastPromise;
-  }
-
-  // This method isolates nested async methods
+  } // This method isolates nested async methods
   // so that they don't conflict with other last promises.
   //
   // 1. Set `Ember.Test.lastPromise` to null
   // 2. Invoke method
   // 3. Return the last promise created during method
+
+
   function isolate(onFulfillment, result) {
     // Reset lastPromise for nested helpers
     lastPromise = null;
-
     var value = onFulfillment(result);
-
     var promise = lastPromise;
-    lastPromise = null;
-
-    // If the method returned a promise
+    lastPromise = null; // If the method returned a promise
     // return that promise. If not,
     // return the last async helper's promise
+
     if (value && value instanceof TestPromise || !promise) {
       return value;
     } else {
-      return (0, _run.default)(function () {
-        return resolve(promise).then(function () {
-          return value;
-        });
-      });
+      return (0, _run.default)(() => resolve(promise).then(() => value));
     }
   }
 });
-enifed('ember-testing/lib/test/run', ['exports', '@ember/runloop'], function (exports, _runloop) {
-  'use strict';
+define("ember-testing/lib/test/run", ["exports", "@ember/runloop"], function (_exports, _runloop) {
+  "use strict";
 
-  exports.default = run;
+  Object.defineProperty(_exports, "__esModule", {
+    value: true
+  });
+  _exports.default = run;
+
   function run(fn) {
-    if (!(0, _runloop.getCurrentRunLoop)()) {
+    if (!(0, _runloop._getCurrentRunLoop)()) {
       return (0, _runloop.run)(fn);
     } else {
       return fn();
     }
   }
 });
-enifed("ember-testing/lib/test/waiters", ["exports"], function (exports) {
+define("ember-testing/lib/test/waiters", ["exports"], function (_exports) {
   "use strict";
 
-  exports.registerWaiter = registerWaiter;
-  exports.unregisterWaiter = unregisterWaiter;
-  exports.checkWaiters = checkWaiters;
+  Object.defineProperty(_exports, "__esModule", {
+    value: true
+  });
+  _exports.registerWaiter = registerWaiter;
+  _exports.unregisterWaiter = unregisterWaiter;
+  _exports.checkWaiters = checkWaiters;
+
   /**
    @module @ember/test
   */
   var contexts = [];
   var callbacks = [];
-
   /**
      This allows ember-testing to play nicely with other asynchronous
      events, such as an application that is waiting for a CSS3
@@ -2387,18 +2587,20 @@ enifed("ember-testing/lib/test/waiters", ["exports"], function (exports) {
      @param {Function} callback
      @since 1.2.0
   */
+
   function registerWaiter(context, callback) {
     if (arguments.length === 1) {
       callback = context;
       context = null;
     }
+
     if (indexOf(context, callback) > -1) {
       return;
     }
+
     contexts.push(context);
     callbacks.push(callback);
   }
-
   /**
      `unregisterWaiter` is used to unregister a callback that was
      registered with `registerWaiter`.
@@ -2411,22 +2613,27 @@ enifed("ember-testing/lib/test/waiters", ["exports"], function (exports) {
      @param {Function} callback
      @since 1.2.0
   */
+
+
   function unregisterWaiter(context, callback) {
     if (!callbacks.length) {
       return;
     }
+
     if (arguments.length === 1) {
       callback = context;
       context = null;
     }
+
     var i = indexOf(context, callback);
+
     if (i === -1) {
       return;
     }
+
     contexts.splice(i, 1);
     callbacks.splice(i, 1);
   }
-
   /**
     Iterates through each registered test waiter, and invokes
     its callback. If any waiter returns false, this method will return
@@ -2440,17 +2647,22 @@ enifed("ember-testing/lib/test/waiters", ["exports"], function (exports) {
     @static
     @method checkWaiters
   */
+
+
   function checkWaiters() {
     if (!callbacks.length) {
       return false;
     }
+
     for (var i = 0; i < callbacks.length; i++) {
       var context = contexts[i];
       var callback = callbacks[i];
+
       if (!callback.call(context)) {
         return true;
       }
     }
+
     return false;
   }
 
@@ -2460,28 +2672,11 @@ enifed("ember-testing/lib/test/waiters", ["exports"], function (exports) {
         return i;
       }
     }
+
     return -1;
   }
 });
-/*global enifed, module */
-enifed('node-module', ['exports'], function(_exports) {
-  var IS_NODE = typeof module === 'object' && typeof module.require === 'function';
-  if (IS_NODE) {
-    _exports.require = module.require;
-    _exports.module = module;
-    _exports.IS_NODE = IS_NODE;
-  } else {
-    _exports.require = null;
-    _exports.module = null;
-    _exports.IS_NODE = IS_NODE;
-  }
-});
-
-var testing = requireModule('ember-testing');
-Ember.Test = testing.Test;
-Ember.Test.Adapter = testing.Adapter;
-Ember.Test.QUnitAdapter = testing.QUnitAdapter;
-Ember.setupForTesting = testing.setupForTesting;
+require('ember-testing');
 }());
 
 /* globals require, Ember, jQuery */
@@ -2524,14 +2719,14 @@ Ember.setupForTesting = testing.setupForTesting;
   }
 })();
 /*!
- * QUnit 2.6.1
+ * QUnit 2.6.2
  * https://qunitjs.com/
  *
  * Copyright jQuery Foundation and other contributors
  * Released under the MIT license
  * https://jquery.org/license
  *
- * Date: 2018-05-16T02:25Z
+ * Date: 2018-08-19T19:37Z
  */
 (function (global$1) {
   'use strict';
@@ -3474,6 +3669,250 @@ Ember.setupForTesting = testing.setupForTesting;
 
   	return dump;
   })();
+
+  var SuiteReport = function () {
+  	function SuiteReport(name, parentSuite) {
+  		classCallCheck(this, SuiteReport);
+
+  		this.name = name;
+  		this.fullName = parentSuite ? parentSuite.fullName.concat(name) : [];
+
+  		this.tests = [];
+  		this.childSuites = [];
+
+  		if (parentSuite) {
+  			parentSuite.pushChildSuite(this);
+  		}
+  	}
+
+  	createClass(SuiteReport, [{
+  		key: "start",
+  		value: function start(recordTime) {
+  			if (recordTime) {
+  				this._startTime = Date.now();
+  			}
+
+  			return {
+  				name: this.name,
+  				fullName: this.fullName.slice(),
+  				tests: this.tests.map(function (test) {
+  					return test.start();
+  				}),
+  				childSuites: this.childSuites.map(function (suite) {
+  					return suite.start();
+  				}),
+  				testCounts: {
+  					total: this.getTestCounts().total
+  				}
+  			};
+  		}
+  	}, {
+  		key: "end",
+  		value: function end(recordTime) {
+  			if (recordTime) {
+  				this._endTime = Date.now();
+  			}
+
+  			return {
+  				name: this.name,
+  				fullName: this.fullName.slice(),
+  				tests: this.tests.map(function (test) {
+  					return test.end();
+  				}),
+  				childSuites: this.childSuites.map(function (suite) {
+  					return suite.end();
+  				}),
+  				testCounts: this.getTestCounts(),
+  				runtime: this.getRuntime(),
+  				status: this.getStatus()
+  			};
+  		}
+  	}, {
+  		key: "pushChildSuite",
+  		value: function pushChildSuite(suite) {
+  			this.childSuites.push(suite);
+  		}
+  	}, {
+  		key: "pushTest",
+  		value: function pushTest(test) {
+  			this.tests.push(test);
+  		}
+  	}, {
+  		key: "getRuntime",
+  		value: function getRuntime() {
+  			return this._endTime - this._startTime;
+  		}
+  	}, {
+  		key: "getTestCounts",
+  		value: function getTestCounts() {
+  			var counts = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : { passed: 0, failed: 0, skipped: 0, todo: 0, total: 0 };
+
+  			counts = this.tests.reduce(function (counts, test) {
+  				if (test.valid) {
+  					counts[test.getStatus()]++;
+  					counts.total++;
+  				}
+
+  				return counts;
+  			}, counts);
+
+  			return this.childSuites.reduce(function (counts, suite) {
+  				return suite.getTestCounts(counts);
+  			}, counts);
+  		}
+  	}, {
+  		key: "getStatus",
+  		value: function getStatus() {
+  			var _getTestCounts = this.getTestCounts(),
+  			    total = _getTestCounts.total,
+  			    failed = _getTestCounts.failed,
+  			    skipped = _getTestCounts.skipped,
+  			    todo = _getTestCounts.todo;
+
+  			if (failed) {
+  				return "failed";
+  			} else {
+  				if (skipped === total) {
+  					return "skipped";
+  				} else if (todo === total) {
+  					return "todo";
+  				} else {
+  					return "passed";
+  				}
+  			}
+  		}
+  	}]);
+  	return SuiteReport;
+  }();
+
+  var focused = false;
+
+  var moduleStack = [];
+
+  function createModule(name, testEnvironment, modifiers) {
+  	var parentModule = moduleStack.length ? moduleStack.slice(-1)[0] : null;
+  	var moduleName = parentModule !== null ? [parentModule.name, name].join(" > ") : name;
+  	var parentSuite = parentModule ? parentModule.suiteReport : globalSuite;
+
+  	var skip = parentModule !== null && parentModule.skip || modifiers.skip;
+  	var todo = parentModule !== null && parentModule.todo || modifiers.todo;
+
+  	var module = {
+  		name: moduleName,
+  		parentModule: parentModule,
+  		tests: [],
+  		moduleId: generateHash(moduleName),
+  		testsRun: 0,
+  		unskippedTestsRun: 0,
+  		childModules: [],
+  		suiteReport: new SuiteReport(name, parentSuite),
+
+  		// Pass along `skip` and `todo` properties from parent module, in case
+  		// there is one, to childs. And use own otherwise.
+  		// This property will be used to mark own tests and tests of child suites
+  		// as either `skipped` or `todo`.
+  		skip: skip,
+  		todo: skip ? false : todo
+  	};
+
+  	var env = {};
+  	if (parentModule) {
+  		parentModule.childModules.push(module);
+  		extend(env, parentModule.testEnvironment);
+  	}
+  	extend(env, testEnvironment);
+  	module.testEnvironment = env;
+
+  	config.modules.push(module);
+  	return module;
+  }
+
+  function processModule(name, options, executeNow) {
+  	var modifiers = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : {};
+
+  	if (objectType(options) === "function") {
+  		executeNow = options;
+  		options = undefined;
+  	}
+
+  	var module = createModule(name, options, modifiers);
+
+  	// Move any hooks to a 'hooks' object
+  	var testEnvironment = module.testEnvironment;
+  	var hooks = module.hooks = {};
+
+  	setHookFromEnvironment(hooks, testEnvironment, "before");
+  	setHookFromEnvironment(hooks, testEnvironment, "beforeEach");
+  	setHookFromEnvironment(hooks, testEnvironment, "afterEach");
+  	setHookFromEnvironment(hooks, testEnvironment, "after");
+
+  	var moduleFns = {
+  		before: setHookFunction(module, "before"),
+  		beforeEach: setHookFunction(module, "beforeEach"),
+  		afterEach: setHookFunction(module, "afterEach"),
+  		after: setHookFunction(module, "after")
+  	};
+
+  	var currentModule = config.currentModule;
+  	if (objectType(executeNow) === "function") {
+  		moduleStack.push(module);
+  		config.currentModule = module;
+  		executeNow.call(module.testEnvironment, moduleFns);
+  		moduleStack.pop();
+  		module = module.parentModule || currentModule;
+  	}
+
+  	config.currentModule = module;
+
+  	function setHookFromEnvironment(hooks, environment, name) {
+  		var potentialHook = environment[name];
+  		hooks[name] = typeof potentialHook === "function" ? [potentialHook] : [];
+  		delete environment[name];
+  	}
+
+  	function setHookFunction(module, hookName) {
+  		return function setHook(callback) {
+  			module.hooks[hookName].push(callback);
+  		};
+  	}
+  }
+
+  function module$1(name, options, executeNow) {
+  	if (focused) {
+  		return;
+  	}
+
+  	processModule(name, options, executeNow);
+  }
+
+  module$1.only = function () {
+  	if (focused) {
+  		return;
+  	}
+
+  	config.modules.length = 0;
+  	config.queue.length = 0;
+
+  	module$1.apply(undefined, arguments);
+
+  	focused = true;
+  };
+
+  module$1.skip = function (name, options, executeNow) {
+  	if (focused) {
+  		return;
+  	}
+
+  	processModule(name, options, executeNow, { skip: true });
+  };
+
+  module$1.todo = function (name, options, executeNow) {
+  	if (focused) {
+  		return;
+  	}
+
+  	processModule(name, options, executeNow, { todo: true });
+  };
 
   var LISTENERS = Object.create(null);
   var SUPPORTED_EVENTS = ["runStart", "suiteStart", "testStart", "assertion", "testEnd", "suiteEnd", "runEnd"];
@@ -4744,7 +5183,7 @@ Ember.setupForTesting = testing.setupForTesting;
   				result = false;
   			}
 
-  			return this.pushResult({
+  			this.pushResult({
   				result: result,
   				message: assertionMessage
   			});
@@ -5206,121 +5645,6 @@ Ember.setupForTesting = testing.setupForTesting;
   	}
   }
 
-  var SuiteReport = function () {
-  	function SuiteReport(name, parentSuite) {
-  		classCallCheck(this, SuiteReport);
-
-  		this.name = name;
-  		this.fullName = parentSuite ? parentSuite.fullName.concat(name) : [];
-
-  		this.tests = [];
-  		this.childSuites = [];
-
-  		if (parentSuite) {
-  			parentSuite.pushChildSuite(this);
-  		}
-  	}
-
-  	createClass(SuiteReport, [{
-  		key: "start",
-  		value: function start(recordTime) {
-  			if (recordTime) {
-  				this._startTime = Date.now();
-  			}
-
-  			return {
-  				name: this.name,
-  				fullName: this.fullName.slice(),
-  				tests: this.tests.map(function (test) {
-  					return test.start();
-  				}),
-  				childSuites: this.childSuites.map(function (suite) {
-  					return suite.start();
-  				}),
-  				testCounts: {
-  					total: this.getTestCounts().total
-  				}
-  			};
-  		}
-  	}, {
-  		key: "end",
-  		value: function end(recordTime) {
-  			if (recordTime) {
-  				this._endTime = Date.now();
-  			}
-
-  			return {
-  				name: this.name,
-  				fullName: this.fullName.slice(),
-  				tests: this.tests.map(function (test) {
-  					return test.end();
-  				}),
-  				childSuites: this.childSuites.map(function (suite) {
-  					return suite.end();
-  				}),
-  				testCounts: this.getTestCounts(),
-  				runtime: this.getRuntime(),
-  				status: this.getStatus()
-  			};
-  		}
-  	}, {
-  		key: "pushChildSuite",
-  		value: function pushChildSuite(suite) {
-  			this.childSuites.push(suite);
-  		}
-  	}, {
-  		key: "pushTest",
-  		value: function pushTest(test) {
-  			this.tests.push(test);
-  		}
-  	}, {
-  		key: "getRuntime",
-  		value: function getRuntime() {
-  			return this._endTime - this._startTime;
-  		}
-  	}, {
-  		key: "getTestCounts",
-  		value: function getTestCounts() {
-  			var counts = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : { passed: 0, failed: 0, skipped: 0, todo: 0, total: 0 };
-
-  			counts = this.tests.reduce(function (counts, test) {
-  				if (test.valid) {
-  					counts[test.getStatus()]++;
-  					counts.total++;
-  				}
-
-  				return counts;
-  			}, counts);
-
-  			return this.childSuites.reduce(function (counts, suite) {
-  				return suite.getTestCounts(counts);
-  			}, counts);
-  		}
-  	}, {
-  		key: "getStatus",
-  		value: function getStatus() {
-  			var _getTestCounts = this.getTestCounts(),
-  			    total = _getTestCounts.total,
-  			    failed = _getTestCounts.failed,
-  			    skipped = _getTestCounts.skipped,
-  			    todo = _getTestCounts.todo;
-
-  			if (failed) {
-  				return "failed";
-  			} else {
-  				if (skipped === total) {
-  					return "skipped";
-  				} else if (todo === total) {
-  					return "todo";
-  				} else {
-  					return "passed";
-  				}
-  			}
-  		}
-  	}]);
-  	return SuiteReport;
-  }();
-
   // Handle an unhandled exception. By convention, returns true if further
   // error handling should be suppressed and false otherwise.
   // In this case, we will only suppress further error handling if the
@@ -5363,7 +5687,6 @@ Ember.setupForTesting = testing.setupForTesting;
   	}
   }
 
-  var focused = false;
   var QUnit = {};
   var globalSuite = new SuiteReport();
 
@@ -5372,7 +5695,6 @@ Ember.setupForTesting = testing.setupForTesting;
   // it since each module has a suiteReport associated with it.
   config.currentModule.suiteReport = globalSuite;
 
-  var moduleStack = [];
   var globalStartCalled = false;
   var runStarted = false;
 
@@ -5380,143 +5702,7 @@ Ember.setupForTesting = testing.setupForTesting;
   QUnit.isLocal = !(defined.document && window.location.protocol !== "file:");
 
   // Expose the current QUnit version
-  QUnit.version = "2.6.1";
-
-  function createModule(name, testEnvironment, modifiers) {
-  	var parentModule = moduleStack.length ? moduleStack.slice(-1)[0] : null;
-  	var moduleName = parentModule !== null ? [parentModule.name, name].join(" > ") : name;
-  	var parentSuite = parentModule ? parentModule.suiteReport : globalSuite;
-
-  	var skip$$1 = parentModule !== null && parentModule.skip || modifiers.skip;
-  	var todo$$1 = parentModule !== null && parentModule.todo || modifiers.todo;
-
-  	var module = {
-  		name: moduleName,
-  		parentModule: parentModule,
-  		tests: [],
-  		moduleId: generateHash(moduleName),
-  		testsRun: 0,
-  		unskippedTestsRun: 0,
-  		childModules: [],
-  		suiteReport: new SuiteReport(name, parentSuite),
-
-  		// Pass along `skip` and `todo` properties from parent module, in case
-  		// there is one, to childs. And use own otherwise.
-  		// This property will be used to mark own tests and tests of child suites
-  		// as either `skipped` or `todo`.
-  		skip: skip$$1,
-  		todo: skip$$1 ? false : todo$$1
-  	};
-
-  	var env = {};
-  	if (parentModule) {
-  		parentModule.childModules.push(module);
-  		extend(env, parentModule.testEnvironment);
-  	}
-  	extend(env, testEnvironment);
-  	module.testEnvironment = env;
-
-  	config.modules.push(module);
-  	return module;
-  }
-
-  function processModule(name, options, executeNow) {
-  	var modifiers = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : {};
-
-  	var module = createModule(name, options, modifiers);
-
-  	// Move any hooks to a 'hooks' object
-  	var testEnvironment = module.testEnvironment;
-  	var hooks = module.hooks = {};
-
-  	setHookFromEnvironment(hooks, testEnvironment, "before");
-  	setHookFromEnvironment(hooks, testEnvironment, "beforeEach");
-  	setHookFromEnvironment(hooks, testEnvironment, "afterEach");
-  	setHookFromEnvironment(hooks, testEnvironment, "after");
-
-  	function setHookFromEnvironment(hooks, environment, name) {
-  		var potentialHook = environment[name];
-  		hooks[name] = typeof potentialHook === "function" ? [potentialHook] : [];
-  		delete environment[name];
-  	}
-
-  	var moduleFns = {
-  		before: setHookFunction(module, "before"),
-  		beforeEach: setHookFunction(module, "beforeEach"),
-  		afterEach: setHookFunction(module, "afterEach"),
-  		after: setHookFunction(module, "after")
-  	};
-
-  	var currentModule = config.currentModule;
-  	if (objectType(executeNow) === "function") {
-  		moduleStack.push(module);
-  		config.currentModule = module;
-  		executeNow.call(module.testEnvironment, moduleFns);
-  		moduleStack.pop();
-  		module = module.parentModule || currentModule;
-  	}
-
-  	config.currentModule = module;
-  }
-
-  // TODO: extract this to a new file alongside its related functions
-  function module$1(name, options, executeNow) {
-  	if (focused) {
-  		return;
-  	}
-
-  	if (arguments.length === 2) {
-  		if (objectType(options) === "function") {
-  			executeNow = options;
-  			options = undefined;
-  		}
-  	}
-
-  	processModule(name, options, executeNow);
-  }
-
-  module$1.only = function () {
-  	if (focused) {
-  		return;
-  	}
-
-  	config.modules.length = 0;
-  	config.queue.length = 0;
-
-  	module$1.apply(undefined, arguments);
-
-  	focused = true;
-  };
-
-  module$1.skip = function (name, options, executeNow) {
-  	if (focused) {
-  		return;
-  	}
-
-  	if (arguments.length === 2) {
-  		if (objectType(options) === "function") {
-  			executeNow = options;
-  			options = undefined;
-  		}
-  	}
-
-  	processModule(name, options, executeNow, { skip: true });
-  };
-
-  module$1.todo = function (name, options, executeNow) {
-  	if (focused) {
-  		return;
-  	}
-
-  	if (arguments.length === 2) {
-  		if (objectType(options) === "function") {
-  			executeNow = options;
-  			options = undefined;
-  		}
-  	}
-
-  	processModule(name, options, executeNow, { todo: true });
-  };
+  QUnit.version = "2.6.2";
 
   extend(QUnit, {
   	on: on,
@@ -5658,12 +5844,6 @@ Ember.setupForTesting = testing.setupForTesting;
 
   	config.blocking = false;
   	ProcessingQueue.advance();
-  }
-
-  function setHookFunction(module, hookName) {
-  	return function setHook(callback) {
-  		module.hooks[hookName].push(callback);
-  	};
   }
 
   exportQUnit(QUnit);
@@ -7810,900 +7990,1498 @@ Ember.setupForTesting = testing.setupForTesting;
   QUnit.config.testTimeout = QUnit.urlParams.devmode ? null : 60000; //Default Test Timeout 60 Seconds
 })();
 
-(function () {
-'use strict';
+var QUnitDOM = (function (exports) {
+  'use strict';
 
-function exists(options, message) {
-    if (typeof this.target !== 'string') {
-        throw new TypeError("Unexpected Parameter: " + this.target);
-    }
-    if (typeof options === 'string') {
-        message = options;
-        options = undefined;
-    }
-    var elements = this.rootElement.querySelectorAll(this.target);
-    var expectedCount = options ? options.count : null;
-    if (expectedCount === null) {
-        var result = elements.length > 0;
-        var expected = format(this.target);
-        var actual = result ? expected : format(this.target, 0);
-        if (!message) {
-            message = expected;
-        }
-        this.pushResult({ result: result, actual: actual, expected: expected, message: message });
-    }
-    else if (typeof expectedCount === 'number') {
-        var result = elements.length === expectedCount;
-        var actual = format(this.target, elements.length);
-        var expected = format(this.target, expectedCount);
-        if (!message) {
-            message = expected;
-        }
-        this.pushResult({ result: result, actual: actual, expected: expected, message: message });
-    }
-    else {
-        throw new TypeError("Unexpected Parameter: " + expectedCount);
-    }
-}
-function format(selector, num) {
-    if (num === undefined || num === null) {
-        return "Element " + selector + " exists";
-    }
-    else if (num === 0) {
-        return "Element " + selector + " does not exist";
-    }
-    else if (num === 1) {
-        return "Element " + selector + " exists once";
-    }
-    else if (num === 2) {
-        return "Element " + selector + " exists twice";
-    }
-    else {
-        return "Element " + selector + " exists " + num + " times";
-    }
-}
+  function exists(options, message) {
+      var expectedCount = null;
+      if (typeof options === 'string') {
+          message = options;
+      }
+      else if (options) {
+          expectedCount = options.count;
+      }
+      var elements = this.findElements();
+      if (expectedCount === null) {
+          var result = elements.length > 0;
+          var expected = format(this.targetDescription);
+          var actual = result ? expected : format(this.targetDescription, 0);
+          if (!message) {
+              message = expected;
+          }
+          this.pushResult({ result: result, actual: actual, expected: expected, message: message });
+      }
+      else if (typeof expectedCount === 'number') {
+          var result = elements.length === expectedCount;
+          var actual = format(this.targetDescription, elements.length);
+          var expected = format(this.targetDescription, expectedCount);
+          if (!message) {
+              message = expected;
+          }
+          this.pushResult({ result: result, actual: actual, expected: expected, message: message });
+      }
+      else {
+          throw new TypeError("Unexpected Parameter: " + expectedCount);
+      }
+  }
+  function format(selector, num) {
+      if (num === undefined || num === null) {
+          return "Element " + selector + " exists";
+      }
+      else if (num === 0) {
+          return "Element " + selector + " does not exist";
+      }
+      else if (num === 1) {
+          return "Element " + selector + " exists once";
+      }
+      else if (num === 2) {
+          return "Element " + selector + " exists twice";
+      }
+      else {
+          return "Element " + selector + " exists " + num + " times";
+      }
+  }
 
-// imported from https://github.com/nathanboktae/chai-dom
-function elementToString(el) {
-    var desc;
-    if (el instanceof NodeList) {
-        if (el.length === 0) {
-            return 'empty NodeList';
-        }
-        desc = Array.prototype.slice.call(el, 0, 5).map(elementToString).join(', ');
-        return el.length > 5 ? desc + "... (+" + (el.length - 5) + " more)" : desc;
-    }
-    if (!(el instanceof HTMLElement)) {
-        return String(el);
-    }
-    desc = el.tagName.toLowerCase();
-    if (el.id) {
-        desc += "#" + el.id;
-    }
-    if (el.className) {
-        desc += "." + String(el.className).replace(/\s+/g, '.');
-    }
-    Array.prototype.forEach.call(el.attributes, function (attr) {
-        if (attr.name !== 'class' && attr.name !== 'id') {
-            desc += "[" + attr.name + (attr.value ? "=\"" + attr.value + "\"]" : ']');
-        }
-    });
-    return desc;
-}
+  // imported from https://github.com/nathanboktae/chai-dom
+  function elementToString(el) {
+      if (!el)
+          return '<not found>';
+      var desc;
+      if (el instanceof NodeList) {
+          if (el.length === 0) {
+              return 'empty NodeList';
+          }
+          desc = Array.prototype.slice.call(el, 0, 5).map(elementToString).join(', ');
+          return el.length > 5 ? desc + "... (+" + (el.length - 5) + " more)" : desc;
+      }
+      if (!(el instanceof HTMLElement || el instanceof SVGElement)) {
+          return String(el);
+      }
+      desc = el.tagName.toLowerCase();
+      if (el.id) {
+          desc += "#" + el.id;
+      }
+      if (el.className && !(el.className instanceof SVGAnimatedString)) {
+          desc += "." + String(el.className).replace(/\s+/g, '.');
+      }
+      Array.prototype.forEach.call(el.attributes, function (attr) {
+          if (attr.name !== 'class' && attr.name !== 'id') {
+              desc += "[" + attr.name + (attr.value ? "=\"" + attr.value + "\"]" : ']');
+          }
+      });
+      return desc;
+  }
 
-function focused(message) {
-    var element = this.findTargetElement();
-    if (!element)
-        return;
-    var result = document.activeElement === element;
-    var actual = elementToString(document.activeElement);
-    var expected = elementToString(this.target);
-    if (!message) {
-        message = "Element " + expected + " is focused";
-    }
-    this.pushResult({ result: result, actual: actual, expected: expected, message: message });
-}
+  function focused(message) {
+      var element = this.findTargetElement();
+      if (!element)
+          return;
+      var result = document.activeElement === element;
+      var actual = elementToString(document.activeElement);
+      var expected = elementToString(this.target);
+      if (!message) {
+          message = "Element " + expected + " is focused";
+      }
+      this.pushResult({ result: result, actual: actual, expected: expected, message: message });
+  }
 
-function notFocused(message) {
-    var element = this.findTargetElement();
-    if (!element)
-        return;
-    var result = document.activeElement !== element;
-    if (!message) {
-        message = "Element " + this.targetDescription + " is not focused";
-    }
-    this.pushResult({ result: result, message: message });
-}
+  function notFocused(message) {
+      var element = this.findTargetElement();
+      if (!element)
+          return;
+      var result = document.activeElement !== element;
+      var expected = "Element " + this.targetDescription + " is not focused";
+      var actual = result ? expected : "Element " + this.targetDescription + " is focused";
+      if (!message) {
+          message = expected;
+      }
+      this.pushResult({ result: result, message: message, actual: actual, expected: expected });
+  }
 
-function checked(message) {
-    var element = this.findTargetElement();
-    if (!element)
-        return;
-    var result = element.checked === true;
-    var actual = element.checked === true ? 'checked' : 'not checked';
-    var expected = 'checked';
-    if (!message) {
-        message = "Element " + elementToString(this.target) + " is checked";
-    }
-    this.pushResult({ result: result, actual: actual, expected: expected, message: message });
-}
+  function checked(message) {
+      var element = this.findTargetElement();
+      if (!element)
+          return;
+      var isChecked = element.checked === true;
+      var isNotChecked = element.checked === false;
+      var result = isChecked;
+      var hasCheckedProp = isChecked || isNotChecked;
+      if (!hasCheckedProp) {
+          var ariaChecked = element.getAttribute('aria-checked');
+          if (ariaChecked !== null) {
+              result = ariaChecked === 'true';
+          }
+      }
+      var actual = result ? 'checked' : 'not checked';
+      var expected = 'checked';
+      if (!message) {
+          message = "Element " + elementToString(this.target) + " is checked";
+      }
+      this.pushResult({ result: result, actual: actual, expected: expected, message: message });
+  }
 
-function notChecked(message) {
-    var element = this.findTargetElement();
-    if (!element)
-        return;
-    var result = element.checked === false;
-    var actual = element.checked === true ? 'checked' : 'not checked';
-    var expected = 'not checked';
-    if (!message) {
-        message = "Element " + elementToString(this.target) + " is not checked";
-    }
-    this.pushResult({ result: result, actual: actual, expected: expected, message: message });
-}
+  function notChecked(message) {
+      var element = this.findTargetElement();
+      if (!element)
+          return;
+      var isChecked = element.checked === true;
+      var isNotChecked = element.checked === false;
+      var result = !isChecked;
+      var hasCheckedProp = isChecked || isNotChecked;
+      if (!hasCheckedProp) {
+          var ariaChecked = element.getAttribute('aria-checked');
+          if (ariaChecked !== null) {
+              result = ariaChecked !== 'true';
+          }
+      }
+      var actual = result ? 'not checked' : 'checked';
+      var expected = 'not checked';
+      if (!message) {
+          message = "Element " + elementToString(this.target) + " is not checked";
+      }
+      this.pushResult({ result: result, actual: actual, expected: expected, message: message });
+  }
 
-function required(message) {
-    var element = this.findTargetElement();
-    if (!element)
-        return;
-    if (!(element instanceof HTMLInputElement ||
-        element instanceof HTMLTextAreaElement ||
-        element instanceof HTMLSelectElement)) {
-        throw new TypeError("Unexpected Element Type: " + element.toString());
-    }
-    var result = element.required === true;
-    var actual = result ? 'required' : 'not required';
-    var expected = 'required';
-    if (!message) {
-        message = "Element " + elementToString(this.target) + " is required";
-    }
-    this.pushResult({ result: result, actual: actual, expected: expected, message: message });
-}
+  function required(message) {
+      var element = this.findTargetElement();
+      if (!element)
+          return;
+      if (!(element instanceof HTMLInputElement ||
+          element instanceof HTMLTextAreaElement ||
+          element instanceof HTMLSelectElement)) {
+          throw new TypeError("Unexpected Element Type: " + element.toString());
+      }
+      var result = element.required === true;
+      var actual = result ? 'required' : 'not required';
+      var expected = 'required';
+      if (!message) {
+          message = "Element " + elementToString(this.target) + " is required";
+      }
+      this.pushResult({ result: result, actual: actual, expected: expected, message: message });
+  }
 
-function notRequired(message) {
-    var element = this.findTargetElement();
-    if (!element)
-        return;
-    if (!(element instanceof HTMLInputElement ||
-        element instanceof HTMLTextAreaElement ||
-        element instanceof HTMLSelectElement)) {
-        throw new TypeError("Unexpected Element Type: " + element.toString());
-    }
-    var result = element.required === false;
-    var actual = !result ? 'required' : 'not required';
-    var expected = 'not required';
-    if (!message) {
-        message = "Element " + elementToString(this.target) + " is not required";
-    }
-    this.pushResult({ result: result, actual: actual, expected: expected, message: message });
-}
+  function notRequired(message) {
+      var element = this.findTargetElement();
+      if (!element)
+          return;
+      if (!(element instanceof HTMLInputElement ||
+          element instanceof HTMLTextAreaElement ||
+          element instanceof HTMLSelectElement)) {
+          throw new TypeError("Unexpected Element Type: " + element.toString());
+      }
+      var result = element.required === false;
+      var actual = !result ? 'required' : 'not required';
+      var expected = 'not required';
+      if (!message) {
+          message = "Element " + elementToString(this.target) + " is not required";
+      }
+      this.pushResult({ result: result, actual: actual, expected: expected, message: message });
+  }
 
-// Visible logic based on jQuery's
-// https://github.com/jquery/jquery/blob/4a2bcc27f9c3ee24b3effac0fbe1285d1ee23cc5/src/css/hiddenVisibleSelectors.js#L11-L13
-function visible(el) {
-    if (el === null)
-        return false;
-    if (el.offsetWidth === 0 || el.offsetHeight === 0)
-        return false;
-    var clientRects = el.getClientRects();
-    if (clientRects.length === 0)
-        return false;
-    for (var i = 0; i < clientRects.length; i++) {
-        var rect = clientRects[i];
-        if (rect.width !== 0 && rect.height !== 0)
-            return true;
-    }
-    return false;
-}
+  function isValid(message, options) {
+      if (options === void 0) { options = {}; }
+      var element = this.findTargetElement();
+      if (!element)
+          return;
+      if (!(element instanceof HTMLFormElement ||
+          element instanceof HTMLInputElement ||
+          element instanceof HTMLTextAreaElement ||
+          element instanceof HTMLButtonElement ||
+          element instanceof HTMLOutputElement ||
+          element instanceof HTMLSelectElement)) {
+          throw new TypeError("Unexpected Element Type: " + element.toString());
+      }
+      var validity = element.reportValidity() === true;
+      var result = validity === !options.inverted;
+      var actual = validity ? 'valid' : 'not valid';
+      var expected = options.inverted ? 'not valid' : 'valid';
+      if (!message) {
+          message = "Element " + elementToString(this.target) + " is " + actual;
+      }
+      this.pushResult({ result: result, actual: actual, expected: expected, message: message });
+  }
 
-function isVisible(message) {
-    var element = this.findElement();
-    var result = visible(element);
-    var actual = result
-        ? "Element " + this.target + " is visible"
-        : "Element " + this.target + " is not visible";
-    var expected = "Element " + this.target + " is visible";
-    if (!message) {
-        message = expected;
-    }
-    this.pushResult({ result: result, actual: actual, expected: expected, message: message });
-}
+  // Visible logic based on jQuery's
+  // https://github.com/jquery/jquery/blob/4a2bcc27f9c3ee24b3effac0fbe1285d1ee23cc5/src/css/hiddenVisibleSelectors.js#L11-L13
+  function visible(el) {
+      if (el === null)
+          return false;
+      if (el.offsetWidth === 0 || el.offsetHeight === 0)
+          return false;
+      var clientRects = el.getClientRects();
+      if (clientRects.length === 0)
+          return false;
+      for (var i = 0; i < clientRects.length; i++) {
+          var rect = clientRects[i];
+          if (rect.width !== 0 && rect.height !== 0)
+              return true;
+      }
+      return false;
+  }
 
-function isNotVisible(message) {
-    var element = this.findElement();
-    var result = !visible(element);
-    var actual = result
-        ? "Element " + this.target + " is not visible"
-        : "Element " + this.target + " is visible";
-    var expected = "Element " + this.target + " is not visible";
-    if (!message) {
-        message = expected;
-    }
-    this.pushResult({ result: result, actual: actual, expected: expected, message: message });
-}
+  function isVisible(options, message) {
+      var expectedCount = null;
+      if (typeof options === 'string') {
+          message = options;
+      }
+      else if (options) {
+          expectedCount = options.count;
+      }
+      var elements = this.findElements().filter(visible);
+      if (expectedCount === null) {
+          var result = elements.length > 0;
+          var expected = format$1(this.targetDescription);
+          var actual = result ? expected : format$1(this.targetDescription, 0);
+          if (!message) {
+              message = expected;
+          }
+          this.pushResult({ result: result, actual: actual, expected: expected, message: message });
+      }
+      else if (typeof expectedCount === 'number') {
+          var result = elements.length === expectedCount;
+          var actual = format$1(this.targetDescription, elements.length);
+          var expected = format$1(this.targetDescription, expectedCount);
+          if (!message) {
+              message = expected;
+          }
+          this.pushResult({ result: result, actual: actual, expected: expected, message: message });
+      }
+      else {
+          throw new TypeError("Unexpected Parameter: " + expectedCount);
+      }
+  }
+  function format$1(selector, num) {
+      if (num === undefined || num === null) {
+          return "Element " + selector + " is visible";
+      }
+      else if (num === 0) {
+          return "Element " + selector + " is not visible";
+      }
+      else if (num === 1) {
+          return "Element " + selector + " is visible once";
+      }
+      else if (num === 2) {
+          return "Element " + selector + " is visible twice";
+      }
+      else {
+          return "Element " + selector + " is visible " + num + " times";
+      }
+  }
 
-function isDisabled(message, options) {
-    if (options === void 0) { options = {}; }
-    var inverted = options.inverted;
-    var element = this.findTargetElement();
-    if (!element)
-        return;
-    if (!(element instanceof HTMLInputElement ||
-        element instanceof HTMLTextAreaElement ||
-        element instanceof HTMLSelectElement ||
-        element instanceof HTMLButtonElement ||
-        element instanceof HTMLOptGroupElement ||
-        element instanceof HTMLOptionElement ||
-        element instanceof HTMLFieldSetElement)) {
-        throw new TypeError("Unexpected Element Type: " + element.toString());
-    }
-    var result = element.disabled === !inverted;
-    var actual = element.disabled === false
-        ? "Element " + this.targetDescription + " is not disabled"
-        : "Element " + this.targetDescription + " is disabled";
-    var expected = inverted
-        ? "Element " + this.targetDescription + " is not disabled"
-        : "Element " + this.targetDescription + " is disabled";
-    if (!message) {
-        message = expected;
-    }
-    this.pushResult({ result: result, actual: actual, expected: expected, message: message });
-}
+  function isDisabled(message, options) {
+      if (options === void 0) { options = {}; }
+      var inverted = options.inverted;
+      var element = this.findTargetElement();
+      if (!element)
+          return;
+      if (!(element instanceof HTMLInputElement ||
+          element instanceof HTMLTextAreaElement ||
+          element instanceof HTMLSelectElement ||
+          element instanceof HTMLButtonElement ||
+          element instanceof HTMLOptGroupElement ||
+          element instanceof HTMLOptionElement ||
+          element instanceof HTMLFieldSetElement)) {
+          throw new TypeError("Unexpected Element Type: " + element.toString());
+      }
+      var result = element.disabled === !inverted;
+      var actual = element.disabled === false
+          ? "Element " + this.targetDescription + " is not disabled"
+          : "Element " + this.targetDescription + " is disabled";
+      var expected = inverted
+          ? "Element " + this.targetDescription + " is not disabled"
+          : "Element " + this.targetDescription + " is disabled";
+      if (!message) {
+          message = expected;
+      }
+      this.pushResult({ result: result, actual: actual, expected: expected, message: message });
+  }
 
-function collapseWhitespace(string) {
-    return string
-        .replace(/[\t\r\n]/g, ' ')
-        .replace(/ +/g, ' ')
-        .replace(/^ /, '')
-        .replace(/ $/, '');
-}
+  function matchesSelector(elements, compareSelector) {
+      var failures = elements.filter(function (it) { return !it.matches(compareSelector); });
+      return failures.length;
+  }
 
-var DOMAssertions = /** @class */ (function () {
-    function DOMAssertions(target, rootElement, testContext) {
-        this.target = target;
-        this.rootElement = rootElement;
-        this.testContext = testContext;
-    }
-    /**
-     * Assert an [HTMLElement][] (or multiple) matching the `selector` exists.
-     *
-     * @name exists
-     * @param {object?} options
-     * @param {string?} message
-     *
-     * @example
-     * assert.dom('#title').exists();
-     * assert.dom('.choice').exists({ count: 4 });
-     *
-     * @see {@link #doesNotExist}
-     */
-    DOMAssertions.prototype.exists = function (options, message) {
-        exists.call(this, options, message);
-    };
-    /**
-     * Assert an [HTMLElement][] matching the `selector` does not exists.
-     *
-     * @name doesNotExist
-     * @param {string?} message
-     *
-     * @example
-     * assert.dom('.should-not-exist').doesNotExist();
-     *
-     * @see {@link #exists}
-     */
-    DOMAssertions.prototype.doesNotExist = function (message) {
-        exists.call(this, { count: 0 }, message);
-    };
-    /**
-     * Assert that the [HTMLElement][] or an [HTMLElement][] matching the
-     * `selector` is currently checked.
-     *
-     * @name isChecked
-     * @param {string?} message
-     *
-     * @example
-     * assert.dom('input.active').isChecked();
-     *
-     * @see {@link #isNotChecked}
-     */
-    DOMAssertions.prototype.isChecked = function (message) {
-        checked.call(this, message);
-    };
-    /**
-     * Assert that the [HTMLElement][] or an [HTMLElement][] matching the
-     * `selector` is currently unchecked.
-     *
-     * @name isNotChecked
-     * @param {string?} message
-     *
-     * @example
-     * assert.dom('input.active').isNotChecked();
-     *
-     * @see {@link #isChecked}
-     */
-    DOMAssertions.prototype.isNotChecked = function (message) {
-        notChecked.call(this, message);
-    };
-    /**
-     * Assert that the [HTMLElement][] or an [HTMLElement][] matching the
-     * `selector` is currently focused.
-     *
-     * @name isFocused
-     * @param {string?} message
-     *
-     * @example
-     * assert.dom('input.email').isFocused();
-     *
-     * @see {@link #isNotFocused}
-     */
-    DOMAssertions.prototype.isFocused = function (message) {
-        focused.call(this, message);
-    };
-    /**
-     * Assert that the [HTMLElement][] or an [HTMLElement][] matching the
-     * `selector` is not currently focused.
-     *
-     * @name isNotFocused
-     * @param {string?} message
-     *
-     * @example
-     * assert.dom('input[type="password"]').isNotFocused();
-     *
-     * @see {@link #isFocused}
-     */
-    DOMAssertions.prototype.isNotFocused = function (message) {
-        notFocused.call(this, message);
-    };
-    /**
-     * Assert that the [HTMLElement][] or an [HTMLElement][] matching the
-     * `selector` is currently required.
-     *
-     * @name isRequired
-     * @param {string?} message
-     *
-     * @example
-     * assert.dom('input[type="text"]').isRequired();
-     *
-     * @see {@link #isNotRequired}
-     */
-    DOMAssertions.prototype.isRequired = function (message) {
-        required.call(this, message);
-    };
-    /**
-     * Assert that the [HTMLElement][] or an [HTMLElement][] matching the
-     * `selector` is currently not required.
-     *
-     * @name isNotRequired
-     * @param {string?} message
-     *
-     * @example
-     * assert.dom('input[type="text"]').isNotRequired();
-     *
-     * @see {@link #isRequired}
-     */
-    DOMAssertions.prototype.isNotRequired = function (message) {
-        notRequired.call(this, message);
-    };
-    /**
-     * Assert that the [HTMLElement][] or an [HTMLElement][] matching the
-     * `selector` exists and is visible.
-     *
-     * Visibility is determined by asserting that:
-     *
-     * - the element's offsetWidth and offsetHeight are non-zero
-     * - any of the element's DOMRect objects have a non-zero size
-     *
-     * Additionally, visibility in this case means that the element is visible on the page,
-     * but not necessarily in the viewport.
-     *
-     * @name isVisible
-     * @param {string?} message
-     *
-     * @example
-     * assert.dom('.foo').isVisible();
-     *
-     * @see {@link #isNotVisible}
-     */
-    DOMAssertions.prototype.isVisible = function (message) {
-        isVisible.call(this, message);
-    };
-    /**
-     * Assert that the [HTMLElement][] or an [HTMLElement][] matching the
-     * `selector` does not exist or is not visible on the page.
-     *
-     * Visibility is determined by asserting that:
-     *
-     * - the element's offsetWidth or offsetHeight are zero
-     * - all of the element's DOMRect objects have a size of zero
-     *
-     * Additionally, visibility in this case means that the element is visible on the page,
-     * but not necessarily in the viewport.
-     *
-     * @name isNotVisible
-     * @param {string?} message
-     *
-     * @example
-     * assert.dom('.foo').isNotVisible();
-     *
-     * @see {@link #isVisible}
-     */
-    DOMAssertions.prototype.isNotVisible = function (message) {
-        isNotVisible.call(this, message);
-    };
-    /**
-     * Assert that the [HTMLElement][] has an attribute with the provided `name`
-     * and optionally checks if the attribute `value` matches the provided text
-     * or regular expression.
-     *
-     * @name hasAttribute
-     * @param {string} name
-     * @param {string|RegExp|object?} value
-     * @param {string?} message
-     *
-     * @example
-     * assert.dom('input.password-input').hasAttribute('type', 'password');
-     *
-     * @see {@link #doesNotHaveAttribute}
-     */
-    DOMAssertions.prototype.hasAttribute = function (name, value, message) {
-        var element = this.findTargetElement();
-        if (!element)
-            return;
-        if (arguments.length === 1) {
-            value = { any: true };
-        }
-        var actualValue = element.getAttribute(name);
-        if (value instanceof RegExp) {
-            var result = value.test(actualValue);
-            var expected = "Element " + this.targetDescription + " has attribute \"" + name + "\" with value matching " + value;
-            var actual = actualValue === null
-                ? "Element " + this.targetDescription + " does not have attribute \"" + name + "\""
-                : "Element " + this.targetDescription + " has attribute \"" + name + "\" with value " + JSON.stringify(actualValue);
-            if (!message) {
-                message = expected;
-            }
-            this.pushResult({ result: result, actual: actual, expected: expected, message: message });
-        }
-        else if (value.any === true) {
-            var result = actualValue !== null;
-            var expected = "Element " + this.targetDescription + " has attribute \"" + name + "\"";
-            var actual = result ? expected : "Element " + this.targetDescription + " does not have attribute \"" + name + "\"";
-            if (!message) {
-                message = expected;
-            }
-            this.pushResult({ result: result, actual: actual, expected: expected, message: message });
-        }
-        else {
-            var result = value === actualValue;
-            var expected = "Element " + this.targetDescription + " has attribute \"" + name + "\" with value " + JSON.stringify(value);
-            var actual = actualValue === null
-                ? "Element " + this.targetDescription + " does not have attribute \"" + name + "\""
-                : "Element " + this.targetDescription + " has attribute \"" + name + "\" with value " + JSON.stringify(actualValue);
-            if (!message) {
-                message = expected;
-            }
-            this.pushResult({ result: result, actual: actual, expected: expected, message: message });
-        }
-    };
-    /**
-     * Assert that the [HTMLElement][] has no attribute with the provided `name`.
-     *
-     * **Aliases:** `hasNoAttribute`, `lacksAttribute`
-     *
-     * @name doesNotHaveAttribute
-     * @param {string} name
-     * @param {string?} message
-     *
-     * @example
-     * assert.dom('input.username').hasNoAttribute('disabled');
-     *
-     * @see {@link #hasAttribute}
-     */
-    DOMAssertions.prototype.doesNotHaveAttribute = function (name, message) {
-        var element = this.findTargetElement();
-        if (!element)
-            return;
-        var result = !element.hasAttribute(name);
-        var expected = "Element " + this.targetDescription + " does not have attribute \"" + name + "\"";
-        var actual = expected;
-        if (!result) {
-            var value = element.getAttribute(name);
-            actual = "Element " + this.targetDescription + " has attribute \"" + name + "\" with value " + JSON.stringify(value);
-        }
-        if (!message) {
-            message = expected;
-        }
-        this.pushResult({ result: result, actual: actual, expected: expected, message: message });
-    };
-    DOMAssertions.prototype.hasNoAttribute = function (name, message) {
-        this.doesNotHaveAttribute(name, message);
-    };
-    DOMAssertions.prototype.lacksAttribute = function (name, message) {
-        this.doesNotHaveAttribute(name, message);
-    };
-    /**
-     *  Assert that the [HTMLElement][] or an [HTMLElement][] matching the
-     * `selector` is disabled.
-     *
-     * @name isDisabled
-     * @param {string?} message
-     *
-     * @example
-     * assert.dom('.foo').isDisabled();
-     *
-     * @see {@link #isNotDisabled}
-     */
-    DOMAssertions.prototype.isDisabled = function (message) {
-        isDisabled.call(this, message);
-    };
-    /**
-     *  Assert that the [HTMLElement][] or an [HTMLElement][] matching the
-     * `selector` is not disabled.
-     *
-     * @name isNotDisabled
-     * @param {string?} message
-     *
-     * @example
-     * assert.dom('.foo').isNotDisabled();
-     *
-     * @see {@link #isDisabled}
-     */
-    DOMAssertions.prototype.isNotDisabled = function (message) {
-        isDisabled.call(this, message, { inverted: true });
-    };
-    /**
-     * Assert that the [HTMLElement][] has the `expected` CSS class using
-     * [`classList`](https://developer.mozilla.org/en-US/docs/Web/API/Element/classList).
-     *
-     * @name hasClass
-     * @param {string} expected
-     * @param {string?} message
-     *
-     * @example
-     * assert.dom('input[type="password"]').hasClass('secret-password-input');
-     *
-     * @see {@link #doesNotHaveClass}
-     */
-    DOMAssertions.prototype.hasClass = function (expected, message) {
-        var element = this.findTargetElement();
-        if (!element)
-            return;
-        var actual = element.classList.toString();
-        var result = element.classList.contains(expected);
-        if (!message) {
-            message = "Element " + this.targetDescription + " has CSS class \"" + expected + "\"";
-        }
-        this.pushResult({ result: result, actual: actual, expected: expected, message: message });
-    };
-    /**
-     * Assert that the [HTMLElement][] does not have the `expected` CSS class using
-     * [`classList`](https://developer.mozilla.org/en-US/docs/Web/API/Element/classList).
-     *
-     * **Aliases:** `hasNoClass`, `lacksClass`
-     *
-     * @name doesNotHaveClass
-     * @param {string} expected
-     * @param {string?} message
-     *
-     * @example
-     * assert.dom('input[type="password"]').doesNotHaveClass('username-input');
-     *
-     * @see {@link #hasClass}
-     */
-    DOMAssertions.prototype.doesNotHaveClass = function (expected, message) {
-        var element = this.findTargetElement();
-        if (!element)
-            return;
-        var result = !element.classList.contains(expected);
-        var actual = element.classList.toString();
-        if (!message) {
-            message = "Element " + this.targetDescription + " does not have CSS class \"" + expected + "\"";
-        }
-        this.pushResult({ result: result, actual: actual, expected: "not: " + expected, message: message });
-    };
-    DOMAssertions.prototype.hasNoClass = function (expected, message) {
-        this.doesNotHaveClass(expected, message);
-    };
-    DOMAssertions.prototype.lacksClass = function (expected, message) {
-        this.doesNotHaveClass(expected, message);
-    };
-    /**
-     * Assert that the text of the [HTMLElement][] or an [HTMLElement][]
-     * matching the `selector` matches the `expected` text, using the
-     * [`textContent`](https://developer.mozilla.org/en-US/docs/Web/API/Node/textContent)
-     * attribute and stripping/collapsing whitespace.
-     *
-     * `expected` can also be a regular expression.
-     *
-     * **Aliases:** `matchesText`
-     *
-     * @name hasText
-     * @param {string|RegExp} expected
-     * @param {string?} message
-     *
-     * @example
-     * // <h2 id="title">
-     * //   Welcome to <b>QUnit</b>
-     * // </h2>
-     *
-     * assert.dom('#title').hasText('Welcome to QUnit');
-     *
-     * @example
-     * assert.dom('.foo').hasText(/[12]\d{3}/);
-     *
-     * @see {@link #includesText}
-     */
-    DOMAssertions.prototype.hasText = function (expected, message) {
-        var element = this.findTargetElement();
-        if (!element)
-            return;
-        if (expected instanceof RegExp) {
-            var result = expected.test(element.textContent);
-            var actual = element.textContent;
-            if (!message) {
-                message = "Element " + this.targetDescription + " has text matching " + expected;
-            }
-            this.pushResult({ result: result, actual: actual, expected: expected, message: message });
-        }
-        else if (expected.any === true) {
-            var result = Boolean(element.textContent);
-            var expected_1 = "Element " + this.targetDescription + " has a text";
-            var actual = result ? expected_1 : "Element " + this.targetDescription + " has no text";
-            if (!message) {
-                message = expected_1;
-            }
-            this.pushResult({ result: result, actual: actual, expected: expected_1, message: message });
-        }
-        else if (typeof expected === 'string') {
-            expected = collapseWhitespace(expected);
-            var actual = collapseWhitespace(element.textContent);
-            var result = actual === expected;
-            if (!message) {
-                message = "Element " + this.targetDescription + " has text \"" + expected + "\"";
-            }
-            this.pushResult({ result: result, actual: actual, expected: expected, message: message });
-        }
-        else {
-            throw new TypeError("You must pass a string or Regular Expression to \"hasText\". You passed " + expected + ".");
-        }
-    };
-    DOMAssertions.prototype.matchesText = function (expected, message) {
-        this.hasText(expected, message);
-    };
-    /**
-     * Assert that the `textContent` property of an [HTMLElement][] is not empty.
-     *
-     * @name hasAnyText
-     * @param {string?} message
-     *
-     * @example
-     * assert.dom('button.share').hasAnyText();
-     *
-     * @see {@link #hasText}
-     */
-    DOMAssertions.prototype.hasAnyText = function (message) {
-        this.hasText({ any: true }, message);
-    };
-    /**
-     * Assert that the text of the [HTMLElement][] or an [HTMLElement][]
-     * matching the `selector` contains the given `text`, using the
-     * [`textContent`](https://developer.mozilla.org/en-US/docs/Web/API/Node/textContent)
-     * attribute.
-     *
-     * **Aliases:** `containsText`, `hasTextContaining`
-     *
-     * @name includesText
-     * @param {string} text
-     * @param {string?} message
-     *
-     * @example
-     * assert.dom('#title').includesText('Welcome');
-     *
-     * @see {@link #hasText}
-     */
-    DOMAssertions.prototype.includesText = function (text, message) {
-        var element = this.findTargetElement();
-        if (!element)
-            return;
-        var result = element.textContent.indexOf(text) !== -1;
-        var actual = element.textContent;
-        var expected = text;
-        if (!message) {
-            message = "Element " + this.targetDescription + " has text containing \"" + text + "\"";
-        }
-        this.pushResult({ result: result, actual: actual, expected: expected, message: message });
-    };
-    DOMAssertions.prototype.containsText = function (expected, message) {
-        this.includesText(expected, message);
-    };
-    DOMAssertions.prototype.hasTextContaining = function (expected, message) {
-        this.includesText(expected, message);
-    };
-    /**
-     * Assert that the text of the [HTMLElement][] or an [HTMLElement][]
-     * matching the `selector` does not include the given `text`, using the
-     * [`textContent`](https://developer.mozilla.org/en-US/docs/Web/API/Node/textContent)
-     * attribute.
-     *
-     * **Aliases:** `doesNotContainText`, `doesNotHaveTextContaining`
-     *
-     * @name doesNotIncludeText
-     * @param {string} text
-     * @param {string?} message
-     *
-     * @example
-     * assert.dom('#title').doesNotIncludeText('Welcome');
-     */
-    DOMAssertions.prototype.doesNotIncludeText = function (text, message) {
-        var element = this.findTargetElement();
-        if (!element)
-            return;
-        var result = element.textContent.indexOf(text) === -1;
-        var expected = "Element " + this.targetDescription + " does not include text \"" + text + "\"";
-        var actual = expected;
-        if (!result) {
-            actual = "Element " + this.targetDescription + " includes text \"" + text + "\"";
-        }
-        if (!message) {
-            message = expected;
-        }
-        this.pushResult({ result: result, actual: actual, expected: expected, message: message });
-    };
-    DOMAssertions.prototype.doesNotContainText = function (unexpected, message) {
-        this.doesNotIncludeText(unexpected, message);
-    };
-    DOMAssertions.prototype.doesNotHaveTextContaining = function (unexpected, message) {
-        this.doesNotIncludeText(unexpected, message);
-    };
-    /**
-     * Assert that the `value` property of an [HTMLInputElement][] matches
-     * the `expected` text or regular expression.
-     *
-     * If no `expected` value is provided, the assertion will fail if the
-     * `value` is an empty string.
-     *
-     * @name hasValue
-     * @param {string|RegExp|object?} expected
-     * @param {string?} message
-     *
-     * @example
-     * assert.dom('input.username').hasValue('HSimpson');
-  
-     * @see {@link #hasAnyValue}
-     * @see {@link #hasNoValue}
-     */
-    DOMAssertions.prototype.hasValue = function (expected, message) {
-        var element = this.findTargetElement();
-        if (!element)
-            return;
-        if (arguments.length === 0) {
-            expected = { any: true };
-        }
-        var value = element.value;
-        if (expected instanceof RegExp) {
-            var result = expected.test(value);
-            var actual = value;
-            if (!message) {
-                message = "Element " + this.targetDescription + " has value matching " + expected;
-            }
-            this.pushResult({ result: result, actual: actual, expected: expected, message: message });
-        }
-        else if (expected.any === true) {
-            var result = Boolean(value);
-            var expected_2 = "Element " + this.targetDescription + " has a value";
-            var actual = result ? expected_2 : "Element " + this.targetDescription + " has no value";
-            if (!message) {
-                message = expected_2;
-            }
-            this.pushResult({ result: result, actual: actual, expected: expected_2, message: message });
-        }
-        else {
-            var actual = value;
-            var result = actual === expected;
-            if (!message) {
-                message = "Element " + this.targetDescription + " has value \"" + expected + "\"";
-            }
-            this.pushResult({ result: result, actual: actual, expected: expected, message: message });
-        }
-    };
-    /**
-     * Assert that the `value` property of an [HTMLInputElement][] is not empty.
-     *
-     * @name hasAnyValue
-     * @param {string?} message
-     *
-     * @example
-     * assert.dom('input.username').hasAnyValue();
-     *
-     * @see {@link #hasValue}
-     * @see {@link #hasNoValue}
-     */
-    DOMAssertions.prototype.hasAnyValue = function (message) {
-        this.hasValue({ any: true }, message);
-    };
-    /**
-     * Assert that the `value` property of an [HTMLInputElement][] is empty.
-     *
-     * **Aliases:** `lacksValue`
-     *
-     * @name hasNoValue
-     * @param {string?} message
-     *
-     * @example
-     * assert.dom('input.username').hasNoValue();
-     *
-     * @see {@link #hasValue}
-     * @see {@link #hasAnyValue}
-     */
-    DOMAssertions.prototype.hasNoValue = function (message) {
-        this.hasValue('', message);
-    };
-    DOMAssertions.prototype.lacksValue = function (message) {
-        this.hasNoValue(message);
-    };
-    /**
-     * @private
-     */
-    DOMAssertions.prototype.pushResult = function (result) {
-        this.testContext.pushResult(result);
-    };
-    /**
-     * Finds a valid HTMLElement from target, or pushes a failing assertion if a valid
-     * element is not found.
-     * @private
-     * @returns (HTMLElement|null) a valid HTMLElement, or null
-     */
-    DOMAssertions.prototype.findTargetElement = function () {
-        var el = this.findElement();
-        if (el === null) {
-            var message = "Element " + (this.target || '<unknown>') + " should exist";
-            this.pushResult({ message: message, result: false });
-            return null;
-        }
-        return el;
-    };
-    /**
-     * Finds a valid HTMLElement from target
-     * @private
-     * @returns (HTMLElement|null) a valid HTMLElement, or null
-     * @throws TypeError will be thrown if target is an unrecognized type
-     */
-    DOMAssertions.prototype.findElement = function () {
-        if (this.target === null) {
-            return null;
-        }
-        else if (typeof this.target === 'string') {
-            return this.rootElement.querySelector(this.target);
-        }
-        else if (this.target instanceof Element) {
-            return this.target;
-        }
-        else {
-            throw new TypeError("Unexpected Parameter: " + this.target);
-        }
-    };
-    Object.defineProperty(DOMAssertions.prototype, "targetDescription", {
-        /**
-         * @private
-         */
-        get: function () {
-            return elementToString(this.target);
-        },
-        enumerable: true,
-        configurable: true
-    });
-    return DOMAssertions;
-}());
+  function collapseWhitespace(string) {
+      return string
+          .replace(/[\t\r\n]/g, ' ')
+          .replace(/ +/g, ' ')
+          .replace(/^ /, '')
+          .replace(/ $/, '');
+  }
 
-QUnit.assert.dom = function (target, rootElement) {
-    rootElement = rootElement || this.dom.rootElement || document;
-    return new DOMAssertions(target || rootElement, rootElement, this);
-};
+  /**
+   * This function can be used to convert a NodeList to a regular array.
+   * We should be using `Array.from()` for this, but IE11 doesn't support that :(
+   *
+   * @private
+   */
+  function toArray(list) {
+      return Array.prototype.slice.call(list);
+  }
 
-}());
+  var DOMAssertions = /** @class */ (function () {
+      function DOMAssertions(target, rootElement, testContext) {
+          this.target = target;
+          this.rootElement = rootElement;
+          this.testContext = testContext;
+      }
+      /**
+       * Assert an {@link HTMLElement} (or multiple) matching the `selector` exists.
+       *
+       * @param {object?} options
+       * @param {number?} options.count
+       * @param {string?} message
+       *
+       * @example
+       * assert.dom('#title').exists();
+       * assert.dom('.choice').exists({ count: 4 });
+       *
+       * @see {@link #doesNotExist}
+       */
+      DOMAssertions.prototype.exists = function (options, message) {
+          exists.call(this, options, message);
+          return this;
+      };
+      /**
+       * Assert an {@link HTMLElement} matching the `selector` does not exists.
+       *
+       * @param {string?} message
+       *
+       * @example
+       * assert.dom('.should-not-exist').doesNotExist();
+       *
+       * @see {@link #exists}
+       */
+      DOMAssertions.prototype.doesNotExist = function (message) {
+          exists.call(this, { count: 0 }, message);
+          return this;
+      };
+      /**
+       * Assert that the {@link HTMLElement} or an {@link HTMLElement} matching the
+       * `selector` is currently checked.
+       *
+       * Note: This also supports `aria-checked="true/false"`.
+       *
+       * @param {string?} message
+       *
+       * @example
+       * assert.dom('input.active').isChecked();
+       *
+       * @see {@link #isNotChecked}
+       */
+      DOMAssertions.prototype.isChecked = function (message) {
+          checked.call(this, message);
+          return this;
+      };
+      /**
+       * Assert that the {@link HTMLElement} or an {@link HTMLElement} matching the
+       * `selector` is currently unchecked.
+       *
+       * Note: This also supports `aria-checked="true/false"`.
+       *
+       * @param {string?} message
+       *
+       * @example
+       * assert.dom('input.active').isNotChecked();
+       *
+       * @see {@link #isChecked}
+       */
+      DOMAssertions.prototype.isNotChecked = function (message) {
+          notChecked.call(this, message);
+          return this;
+      };
+      /**
+       * Assert that the {@link HTMLElement} or an {@link HTMLElement} matching the
+       * `selector` is currently focused.
+       *
+       * @param {string?} message
+       *
+       * @example
+       * assert.dom('input.email').isFocused();
+       *
+       * @see {@link #isNotFocused}
+       */
+      DOMAssertions.prototype.isFocused = function (message) {
+          focused.call(this, message);
+          return this;
+      };
+      /**
+       * Assert that the {@link HTMLElement} or an {@link HTMLElement} matching the
+       * `selector` is not currently focused.
+       *
+       * @param {string?} message
+       *
+       * @example
+       * assert.dom('input[type="password"]').isNotFocused();
+       *
+       * @see {@link #isFocused}
+       */
+      DOMAssertions.prototype.isNotFocused = function (message) {
+          notFocused.call(this, message);
+          return this;
+      };
+      /**
+       * Assert that the {@link HTMLElement} or an {@link HTMLElement} matching the
+       * `selector` is currently required.
+       *
+       * @param {string?} message
+       *
+       * @example
+       * assert.dom('input[type="text"]').isRequired();
+       *
+       * @see {@link #isNotRequired}
+       */
+      DOMAssertions.prototype.isRequired = function (message) {
+          required.call(this, message);
+          return this;
+      };
+      /**
+       * Assert that the {@link HTMLElement} or an {@link HTMLElement} matching the
+       * `selector` is currently not required.
+       *
+       * @param {string?} message
+       *
+       * @example
+       * assert.dom('input[type="text"]').isNotRequired();
+       *
+       * @see {@link #isRequired}
+       */
+      DOMAssertions.prototype.isNotRequired = function (message) {
+          notRequired.call(this, message);
+          return this;
+      };
+      /**
+       * Assert that the {@link HTMLElement} passes validation
+       *
+       * Validity is determined by asserting that:
+       *
+       * - `element.reportValidity() === true`
+       *
+       * @param {string?} message
+       *
+       * @example
+       * assert.dom('.input').isValid();
+       *
+       * @see {@link #isValid}
+       */
+      DOMAssertions.prototype.isValid = function (message) {
+          isValid.call(this, message);
+          return this;
+      };
+      /**
+       * Assert that the {@link HTMLElement} does not pass validation
+       *
+       * Validity is determined by asserting that:
+       *
+       * - `element.reportValidity() === true`
+       *
+       * @param {string?} message
+       *
+       * @example
+       * assert.dom('.input').isNotValid();
+       *
+       * @see {@link #isValid}
+       */
+      DOMAssertions.prototype.isNotValid = function (message) {
+          isValid.call(this, message, { inverted: true });
+          return this;
+      };
+      /**
+       * Assert that the {@link HTMLElement} or an {@link HTMLElement} matching the
+       * `selector` exists and is visible.
+       *
+       * Visibility is determined by asserting that:
+       *
+       * - the element's offsetWidth and offsetHeight are non-zero
+       * - any of the element's DOMRect objects have a non-zero size
+       *
+       * Additionally, visibility in this case means that the element is visible on the page,
+       * but not necessarily in the viewport.
+       *
+       * @param {object?} options
+       * @param {number?} options.count
+       * @param {string?} message
+       *
+       * @example
+       * assert.dom('#title').isVisible();
+       * assert.dom('.choice').isVisible({ count: 4 });
+       *
+       * @see {@link #isNotVisible}
+       */
+      DOMAssertions.prototype.isVisible = function (options, message) {
+          isVisible.call(this, options, message);
+          return this;
+      };
+      /**
+       * Assert that the {@link HTMLElement} or an {@link HTMLElement} matching the
+       * `selector` does not exist or is not visible on the page.
+       *
+       * Visibility is determined by asserting that:
+       *
+       * - the element's offsetWidth or offsetHeight are zero
+       * - all of the element's DOMRect objects have a size of zero
+       *
+       * Additionally, visibility in this case means that the element is visible on the page,
+       * but not necessarily in the viewport.
+       *
+       * @param {string?} message
+       *
+       * @example
+       * assert.dom('.foo').isNotVisible();
+       *
+       * @see {@link #isVisible}
+       */
+      DOMAssertions.prototype.isNotVisible = function (message) {
+          isVisible.call(this, { count: 0 }, message);
+          return this;
+      };
+      /**
+       * Assert that the {@link HTMLElement} has an attribute with the provided `name`
+       * and optionally checks if the attribute `value` matches the provided text
+       * or regular expression.
+       *
+       * @param {string} name
+       * @param {string|RegExp|object?} value
+       * @param {string?} message
+       *
+       * @example
+       * assert.dom('input.password-input').hasAttribute('type', 'password');
+       *
+       * @see {@link #doesNotHaveAttribute}
+       */
+      DOMAssertions.prototype.hasAttribute = function (name, value, message) {
+          var element = this.findTargetElement();
+          if (!element)
+              return this;
+          if (arguments.length === 1) {
+              value = { any: true };
+          }
+          var actualValue = element.getAttribute(name);
+          if (value instanceof RegExp) {
+              var result = value.test(actualValue);
+              var expected = "Element " + this.targetDescription + " has attribute \"" + name + "\" with value matching " + value;
+              var actual = actualValue === null
+                  ? "Element " + this.targetDescription + " does not have attribute \"" + name + "\""
+                  : "Element " + this.targetDescription + " has attribute \"" + name + "\" with value " + JSON.stringify(actualValue);
+              if (!message) {
+                  message = expected;
+              }
+              this.pushResult({ result: result, actual: actual, expected: expected, message: message });
+          }
+          else if (value.any === true) {
+              var result = actualValue !== null;
+              var expected = "Element " + this.targetDescription + " has attribute \"" + name + "\"";
+              var actual = result
+                  ? expected
+                  : "Element " + this.targetDescription + " does not have attribute \"" + name + "\"";
+              if (!message) {
+                  message = expected;
+              }
+              this.pushResult({ result: result, actual: actual, expected: expected, message: message });
+          }
+          else {
+              var result = value === actualValue;
+              var expected = "Element " + this.targetDescription + " has attribute \"" + name + "\" with value " + JSON.stringify(value);
+              var actual = actualValue === null
+                  ? "Element " + this.targetDescription + " does not have attribute \"" + name + "\""
+                  : "Element " + this.targetDescription + " has attribute \"" + name + "\" with value " + JSON.stringify(actualValue);
+              if (!message) {
+                  message = expected;
+              }
+              this.pushResult({ result: result, actual: actual, expected: expected, message: message });
+          }
+          return this;
+      };
+      /**
+       * Assert that the {@link HTMLElement} has no attribute with the provided `name`.
+       *
+       * **Aliases:** `hasNoAttribute`, `lacksAttribute`
+       *
+       * @param {string} name
+       * @param {string?} message
+       *
+       * @example
+       * assert.dom('input.username').hasNoAttribute('disabled');
+       *
+       * @see {@link #hasAttribute}
+       */
+      DOMAssertions.prototype.doesNotHaveAttribute = function (name, message) {
+          var element = this.findTargetElement();
+          if (!element)
+              return;
+          var result = !element.hasAttribute(name);
+          var expected = "Element " + this.targetDescription + " does not have attribute \"" + name + "\"";
+          var actual = expected;
+          if (!result) {
+              var value = element.getAttribute(name);
+              actual = "Element " + this.targetDescription + " has attribute \"" + name + "\" with value " + JSON.stringify(value);
+          }
+          if (!message) {
+              message = expected;
+          }
+          this.pushResult({ result: result, actual: actual, expected: expected, message: message });
+          return this;
+      };
+      DOMAssertions.prototype.hasNoAttribute = function (name, message) {
+          return this.doesNotHaveAttribute(name, message);
+      };
+      DOMAssertions.prototype.lacksAttribute = function (name, message) {
+          return this.doesNotHaveAttribute(name, message);
+      };
+      /**
+       * Assert that the {@link HTMLElement} has an ARIA attribute with the provided
+       * `name` and optionally checks if the attribute `value` matches the provided
+       * text or regular expression.
+       *
+       * @param {string} name
+       * @param {string|RegExp|object?} value
+       * @param {string?} message
+       *
+       * @example
+       * assert.dom('button').hasAria('pressed', 'true');
+       *
+       * @see {@link #hasNoAria}
+       */
+      DOMAssertions.prototype.hasAria = function (name, value, message) {
+          return this.hasAttribute("aria-" + name, value, message);
+      };
+      /**
+       * Assert that the {@link HTMLElement} has no ARIA attribute with the
+       * provided `name`.
+       *
+       * @param {string} name
+       * @param {string?} message
+       *
+       * @example
+       * assert.dom('button').doesNotHaveAria('pressed');
+       *
+       * @see {@link #hasAria}
+       */
+      DOMAssertions.prototype.doesNotHaveAria = function (name, message) {
+          return this.doesNotHaveAttribute("aria-" + name, message);
+      };
+      /**
+       * Assert that the {@link HTMLElement} has a property with the provided `name`
+       * and checks if the property `value` matches the provided text or regular
+       * expression.
+       *
+       * @param {string} name
+       * @param {RegExp|any} value
+       * @param {string?} message
+       *
+       * @example
+       * assert.dom('input.password-input').hasProperty('type', 'password');
+       *
+       * @see {@link #doesNotHaveProperty}
+       */
+      DOMAssertions.prototype.hasProperty = function (name, value, message) {
+          var element = this.findTargetElement();
+          if (!element)
+              return this;
+          var description = this.targetDescription;
+          var actualValue = element[name];
+          if (value instanceof RegExp) {
+              var result = value.test(String(actualValue));
+              var expected = "Element " + description + " has property \"" + name + "\" with value matching " + value;
+              var actual = "Element " + description + " has property \"" + name + "\" with value " + JSON.stringify(actualValue);
+              if (!message) {
+                  message = expected;
+              }
+              this.pushResult({ result: result, actual: actual, expected: expected, message: message });
+          }
+          else {
+              var result = value === actualValue;
+              var expected = "Element " + description + " has property \"" + name + "\" with value " + JSON.stringify(value);
+              var actual = "Element " + description + " has property \"" + name + "\" with value " + JSON.stringify(actualValue);
+              if (!message) {
+                  message = expected;
+              }
+              this.pushResult({ result: result, actual: actual, expected: expected, message: message });
+          }
+          return this;
+      };
+      /**
+       *  Assert that the {@link HTMLElement} or an {@link HTMLElement} matching the
+       * `selector` is disabled.
+       *
+       * @param {string?} message
+       *
+       * @example
+       * assert.dom('.foo').isDisabled();
+       *
+       * @see {@link #isNotDisabled}
+       */
+      DOMAssertions.prototype.isDisabled = function (message) {
+          isDisabled.call(this, message);
+          return this;
+      };
+      /**
+       *  Assert that the {@link HTMLElement} or an {@link HTMLElement} matching the
+       * `selector` is not disabled.
+       *
+       * **Aliases:** `isEnabled`
+       *
+       * @param {string?} message
+       *
+       * @example
+       * assert.dom('.foo').isNotDisabled();
+       *
+       * @see {@link #isDisabled}
+       */
+      DOMAssertions.prototype.isNotDisabled = function (message) {
+          isDisabled.call(this, message, { inverted: true });
+          return this;
+      };
+      DOMAssertions.prototype.isEnabled = function (message) {
+          return this.isNotDisabled(message);
+      };
+      /**
+       * Assert that the {@link HTMLElement} has the `expected` CSS class using
+       * [`classList`](https://developer.mozilla.org/en-US/docs/Web/API/Element/classList).
+       *
+       * `expected` can also be a regular expression, and the assertion will return
+       * true if any of the element's CSS classes match.
+       *
+       * @param {string|RegExp} expected
+       * @param {string?} message
+       *
+       * @example
+       * assert.dom('input[type="password"]').hasClass('secret-password-input');
+       *
+       * @example
+       * assert.dom('input[type="password"]').hasClass(/.*password-input/);
+       *
+       * @see {@link #doesNotHaveClass}
+       */
+      DOMAssertions.prototype.hasClass = function (expected, message) {
+          var element = this.findTargetElement();
+          if (!element)
+              return this;
+          var actual = element.classList.toString();
+          if (expected instanceof RegExp) {
+              var classNames = Array.prototype.slice.call(element.classList);
+              var result = classNames.some(function (className) {
+                  return expected.test(className);
+              });
+              if (!message) {
+                  message = "Element " + this.targetDescription + " has CSS class matching " + expected;
+              }
+              this.pushResult({ result: result, actual: actual, expected: expected, message: message });
+          }
+          else {
+              var result = element.classList.contains(expected);
+              if (!message) {
+                  message = "Element " + this.targetDescription + " has CSS class \"" + expected + "\"";
+              }
+              this.pushResult({ result: result, actual: actual, expected: expected, message: message });
+          }
+          return this;
+      };
+      /**
+       * Assert that the {@link HTMLElement} does not have the `expected` CSS class using
+       * [`classList`](https://developer.mozilla.org/en-US/docs/Web/API/Element/classList).
+       *
+       * `expected` can also be a regular expression, and the assertion will return
+       * true if none of the element's CSS classes match.
+       *
+       * **Aliases:** `hasNoClass`, `lacksClass`
+       *
+       * @param {string|RegExp} expected
+       * @param {string?} message
+       *
+       * @example
+       * assert.dom('input[type="password"]').doesNotHaveClass('username-input');
+       *
+       * @example
+       * assert.dom('input[type="password"]').doesNotHaveClass(/username-.*-input/);
+       *
+       * @see {@link #hasClass}
+       */
+      DOMAssertions.prototype.doesNotHaveClass = function (expected, message) {
+          var element = this.findTargetElement();
+          if (!element)
+              return this;
+          var actual = element.classList.toString();
+          if (expected instanceof RegExp) {
+              var classNames = Array.prototype.slice.call(element.classList);
+              var result = classNames.every(function (className) {
+                  return !expected.test(className);
+              });
+              if (!message) {
+                  message = "Element " + this.targetDescription + " does not have CSS class matching " + expected;
+              }
+              this.pushResult({ result: result, actual: actual, expected: "not: " + expected, message: message });
+          }
+          else {
+              var result = !element.classList.contains(expected);
+              if (!message) {
+                  message = "Element " + this.targetDescription + " does not have CSS class \"" + expected + "\"";
+              }
+              this.pushResult({ result: result, actual: actual, expected: "not: " + expected, message: message });
+          }
+          return this;
+      };
+      DOMAssertions.prototype.hasNoClass = function (expected, message) {
+          return this.doesNotHaveClass(expected, message);
+      };
+      DOMAssertions.prototype.lacksClass = function (expected, message) {
+          return this.doesNotHaveClass(expected, message);
+      };
+      /**
+       * Assert that the [HTMLElement][] has the `expected` style declarations using
+       * [`window.getComputedStyle`](https://developer.mozilla.org/en-US/docs/Web/API/Window/getComputedStyle).
+       *
+       * @param {object} expected
+       * @param {string?} message
+       *
+       * @example
+       * assert.dom('.progress-bar').hasStyle({
+       *   opacity: 1,
+       *   display: 'block'
+       * });
+       *
+       * @see {@link #hasClass}
+       */
+      DOMAssertions.prototype.hasStyle = function (expected, message) {
+          return this.hasPseudoElementStyle(null, expected, message);
+      };
+      /**
+       * Assert that the pseudo element for `selector` of the [HTMLElement][] has the `expected` style declarations using
+       * [`window.getComputedStyle`](https://developer.mozilla.org/en-US/docs/Web/API/Window/getComputedStyle).
+       *
+       * @param {string} selector
+       * @param {object} expected
+       * @param {string?} message
+       *
+       * @example
+       * assert.dom('.progress-bar').hasPseudoElementStyle(':after', {
+       *   content: '";"',
+       * });
+       *
+       * @see {@link #hasClass}
+       */
+      DOMAssertions.prototype.hasPseudoElementStyle = function (selector, expected, message) {
+          var element = this.findTargetElement();
+          if (!element)
+              return this;
+          var computedStyle = window.getComputedStyle(element, selector);
+          var expectedProperties = Object.keys(expected);
+          if (expectedProperties.length <= 0) {
+              throw new TypeError("Missing style expectations. There must be at least one style property in the passed in expectation object.");
+          }
+          var result = expectedProperties.every(function (property) { return computedStyle[property] === expected[property]; });
+          var actual = {};
+          expectedProperties.forEach(function (property) { return (actual[property] = computedStyle[property]); });
+          if (!message) {
+              var normalizedSelector = selector ? selector.replace(/^:{0,2}/, '::') : '';
+              message = "Element " + this.targetDescription + normalizedSelector + " has style \"" + JSON.stringify(expected) + "\"";
+          }
+          this.pushResult({ result: result, actual: actual, expected: expected, message: message });
+          return this;
+      };
+      /**
+       * Assert that the [HTMLElement][] does not have the `expected` style declarations using
+       * [`window.getComputedStyle`](https://developer.mozilla.org/en-US/docs/Web/API/Window/getComputedStyle).
+       *
+       * @param {object} expected
+       * @param {string?} message
+       *
+       * @example
+       * assert.dom('.progress-bar').doesNotHaveStyle({
+       *   opacity: 1,
+       *   display: 'block'
+       * });
+       *
+       * @see {@link #hasClass}
+       */
+      DOMAssertions.prototype.doesNotHaveStyle = function (expected, message) {
+          return this.doesNotHavePseudoElementStyle(null, expected, message);
+      };
+      /**
+       * Assert that the pseudo element for `selector` of the [HTMLElement][] does not have the `expected` style declarations using
+       * [`window.getComputedStyle`](https://developer.mozilla.org/en-US/docs/Web/API/Window/getComputedStyle).
+       *
+       * @param {string} selector
+       * @param {object} expected
+       * @param {string?} message
+       *
+       * @example
+       * assert.dom('.progress-bar').doesNotHavePseudoElementStyle(':after', {
+       *   content: '";"',
+       * });
+       *
+       * @see {@link #hasClass}
+       */
+      DOMAssertions.prototype.doesNotHavePseudoElementStyle = function (selector, expected, message) {
+          var element = this.findTargetElement();
+          if (!element)
+              return this;
+          var computedStyle = window.getComputedStyle(element, selector);
+          var expectedProperties = Object.keys(expected);
+          if (expectedProperties.length <= 0) {
+              throw new TypeError("Missing style expectations. There must be at least one style property in the passed in expectation object.");
+          }
+          var result = expectedProperties.some(function (property) { return computedStyle[property] !== expected[property]; });
+          var actual = {};
+          expectedProperties.forEach(function (property) { return (actual[property] = computedStyle[property]); });
+          if (!message) {
+              var normalizedSelector = selector ? selector.replace(/^:{0,2}/, '::') : '';
+              message = "Element " + this.targetDescription + normalizedSelector + " does not have style \"" + JSON.stringify(expected) + "\"";
+          }
+          this.pushResult({ result: result, actual: actual, expected: expected, message: message });
+          return this;
+      };
+      /**
+       * Assert that the text of the {@link HTMLElement} or an {@link HTMLElement}
+       * matching the `selector` matches the `expected` text, using the
+       * [`textContent`](https://developer.mozilla.org/en-US/docs/Web/API/Node/textContent)
+       * attribute and stripping/collapsing whitespace.
+       *
+       * `expected` can also be a regular expression.
+       *
+       * > Note: This assertion will collapse whitespace if the type you pass in is a string.
+       * > If you are testing specifically for whitespace integrity, pass your expected text
+       * > in as a RegEx pattern.
+       *
+       * **Aliases:** `matchesText`
+       *
+       * @param {string|RegExp} expected
+       * @param {string?} message
+       *
+       * @example
+       * // <h2 id="title">
+       * //   Welcome to <b>QUnit</b>
+       * // </h2>
+       *
+       * assert.dom('#title').hasText('Welcome to QUnit');
+       *
+       * @example
+       * assert.dom('.foo').hasText(/[12]\d{3}/);
+       *
+       * @see {@link #includesText}
+       */
+      DOMAssertions.prototype.hasText = function (expected, message) {
+          var element = this.findTargetElement();
+          if (!element)
+              return this;
+          if (expected instanceof RegExp) {
+              var result = expected.test(element.textContent);
+              var actual = element.textContent;
+              if (!message) {
+                  message = "Element " + this.targetDescription + " has text matching " + expected;
+              }
+              this.pushResult({ result: result, actual: actual, expected: expected, message: message });
+          }
+          else if (expected.any === true) {
+              var result = Boolean(element.textContent);
+              var expected_1 = "Element " + this.targetDescription + " has a text";
+              var actual = result ? expected_1 : "Element " + this.targetDescription + " has no text";
+              if (!message) {
+                  message = expected_1;
+              }
+              this.pushResult({ result: result, actual: actual, expected: expected_1, message: message });
+          }
+          else if (typeof expected === 'string') {
+              expected = collapseWhitespace(expected);
+              var actual = collapseWhitespace(element.textContent);
+              var result = actual === expected;
+              if (!message) {
+                  message = "Element " + this.targetDescription + " has text \"" + expected + "\"";
+              }
+              this.pushResult({ result: result, actual: actual, expected: expected, message: message });
+          }
+          else {
+              throw new TypeError("You must pass a string or Regular Expression to \"hasText\". You passed " + expected + ".");
+          }
+          return this;
+      };
+      DOMAssertions.prototype.matchesText = function (expected, message) {
+          return this.hasText(expected, message);
+      };
+      /**
+       * Assert that the `textContent` property of an {@link HTMLElement} is not empty.
+       *
+       * @param {string?} message
+       *
+       * @example
+       * assert.dom('button.share').hasAnyText();
+       *
+       * @see {@link #hasText}
+       */
+      DOMAssertions.prototype.hasAnyText = function (message) {
+          return this.hasText({ any: true }, message);
+      };
+      /**
+       * Assert that the `textContent` property of an {@link HTMLElement} is empty.
+       *
+       * @param {string?} message
+       *
+       * @example
+       * assert.dom('div').hasNoText();
+       *
+       * @see {@link #hasNoText}
+       */
+      DOMAssertions.prototype.hasNoText = function (message) {
+          return this.hasText('', message);
+      };
+      /**
+       * Assert that the text of the {@link HTMLElement} or an {@link HTMLElement}
+       * matching the `selector` contains the given `text`, using the
+       * [`textContent`](https://developer.mozilla.org/en-US/docs/Web/API/Node/textContent)
+       * attribute.
+       *
+       * > Note: This assertion will collapse whitespace in `textContent` before searching.
+       * > If you would like to assert on a string that *should* contain line breaks, tabs,
+       * > more than one space in a row, or starting/ending whitespace, use the {@link #hasText}
+       * > selector and pass your expected text in as a RegEx pattern.
+       *
+       * **Aliases:** `containsText`, `hasTextContaining`
+       *
+       * @param {string} text
+       * @param {string?} message
+       *
+       * @example
+       * assert.dom('#title').includesText('Welcome');
+       *
+       * @see {@link #hasText}
+       */
+      DOMAssertions.prototype.includesText = function (text, message) {
+          var element = this.findTargetElement();
+          if (!element)
+              return this;
+          var collapsedText = collapseWhitespace(element.textContent);
+          var result = collapsedText.indexOf(text) !== -1;
+          var actual = collapsedText;
+          var expected = text;
+          if (!message) {
+              message = "Element " + this.targetDescription + " has text containing \"" + text + "\"";
+          }
+          if (!result && text !== collapseWhitespace(text)) {
+              console.warn('The `.includesText()`, `.containsText()`, and `.hasTextContaining()` assertions collapse whitespace. The text you are checking for contains whitespace that may have made your test fail incorrectly. Try the `.hasText()` assertion passing in your expected text as a RegExp pattern. Your text:\n' +
+                  text);
+          }
+          this.pushResult({ result: result, actual: actual, expected: expected, message: message });
+          return this;
+      };
+      DOMAssertions.prototype.containsText = function (expected, message) {
+          return this.includesText(expected, message);
+      };
+      DOMAssertions.prototype.hasTextContaining = function (expected, message) {
+          return this.includesText(expected, message);
+      };
+      /**
+       * Assert that the text of the {@link HTMLElement} or an {@link HTMLElement}
+       * matching the `selector` does not include the given `text`, using the
+       * [`textContent`](https://developer.mozilla.org/en-US/docs/Web/API/Node/textContent)
+       * attribute.
+       *
+       * **Aliases:** `doesNotContainText`, `doesNotHaveTextContaining`
+       *
+       * @param {string} text
+       * @param {string?} message
+       *
+       * @example
+       * assert.dom('#title').doesNotIncludeText('Welcome');
+       */
+      DOMAssertions.prototype.doesNotIncludeText = function (text, message) {
+          var element = this.findTargetElement();
+          if (!element)
+              return this;
+          var collapsedText = collapseWhitespace(element.textContent);
+          var result = collapsedText.indexOf(text) === -1;
+          var expected = "Element " + this.targetDescription + " does not include text \"" + text + "\"";
+          var actual = expected;
+          if (!result) {
+              actual = "Element " + this.targetDescription + " includes text \"" + text + "\"";
+          }
+          if (!message) {
+              message = expected;
+          }
+          this.pushResult({ result: result, actual: actual, expected: expected, message: message });
+          return this;
+      };
+      DOMAssertions.prototype.doesNotContainText = function (unexpected, message) {
+          return this.doesNotIncludeText(unexpected, message);
+      };
+      DOMAssertions.prototype.doesNotHaveTextContaining = function (unexpected, message) {
+          return this.doesNotIncludeText(unexpected, message);
+      };
+      /**
+       * Assert that the `value` property of an {@link HTMLInputElement} matches
+       * the `expected` text or regular expression.
+       *
+       * If no `expected` value is provided, the assertion will fail if the
+       * `value` is an empty string.
+       *
+       * @param {string|RegExp|object?} expected
+       * @param {string?} message
+       *
+       * @example
+       * assert.dom('input.username').hasValue('HSimpson');
+    
+       * @see {@link #hasAnyValue}
+       * @see {@link #hasNoValue}
+       */
+      DOMAssertions.prototype.hasValue = function (expected, message) {
+          var element = this.findTargetElement();
+          if (!element)
+              return this;
+          if (arguments.length === 0) {
+              expected = { any: true };
+          }
+          var value = element.value;
+          if (expected instanceof RegExp) {
+              var result = expected.test(value);
+              var actual = value;
+              if (!message) {
+                  message = "Element " + this.targetDescription + " has value matching " + expected;
+              }
+              this.pushResult({ result: result, actual: actual, expected: expected, message: message });
+          }
+          else if (expected.any === true) {
+              var result = Boolean(value);
+              var expected_2 = "Element " + this.targetDescription + " has a value";
+              var actual = result ? expected_2 : "Element " + this.targetDescription + " has no value";
+              if (!message) {
+                  message = expected_2;
+              }
+              this.pushResult({ result: result, actual: actual, expected: expected_2, message: message });
+          }
+          else {
+              var actual = value;
+              var result = actual === expected;
+              if (!message) {
+                  message = "Element " + this.targetDescription + " has value \"" + expected + "\"";
+              }
+              this.pushResult({ result: result, actual: actual, expected: expected, message: message });
+          }
+          return this;
+      };
+      /**
+       * Assert that the `value` property of an {@link HTMLInputElement} is not empty.
+       *
+       * @param {string?} message
+       *
+       * @example
+       * assert.dom('input.username').hasAnyValue();
+       *
+       * @see {@link #hasValue}
+       * @see {@link #hasNoValue}
+       */
+      DOMAssertions.prototype.hasAnyValue = function (message) {
+          return this.hasValue({ any: true }, message);
+      };
+      /**
+       * Assert that the `value` property of an {@link HTMLInputElement} is empty.
+       *
+       * **Aliases:** `lacksValue`
+       *
+       * @param {string?} message
+       *
+       * @example
+       * assert.dom('input.username').hasNoValue();
+       *
+       * @see {@link #hasValue}
+       * @see {@link #hasAnyValue}
+       */
+      DOMAssertions.prototype.hasNoValue = function (message) {
+          return this.hasValue('', message);
+      };
+      DOMAssertions.prototype.lacksValue = function (message) {
+          return this.hasNoValue(message);
+      };
+      /**
+       * Assert that the target selector selects only Elements that are also selected by
+       * compareSelector.
+       *
+       * @param {string} compareSelector
+       * @param {string?} message
+       *
+       * @example
+       * assert.dom('p.red').matchesSelector('div.wrapper p:last-child')
+       */
+      DOMAssertions.prototype.matchesSelector = function (compareSelector, message) {
+          var targetElements = this.target instanceof Element ? [this.target] : this.findElements();
+          var targets = targetElements.length;
+          var matchFailures = matchesSelector(targetElements, compareSelector);
+          var singleElement = targets === 1;
+          var selectedByPart = this.target instanceof Element ? 'passed' : "selected by " + this.target;
+          var actual;
+          var expected;
+          if (matchFailures === 0) {
+              // no failures matching.
+              if (!message) {
+                  message = singleElement
+                      ? "The element " + selectedByPart + " also matches the selector " + compareSelector + "."
+                      : targets + " elements, selected by " + this.target + ", also match the selector " + compareSelector + ".";
+              }
+              actual = expected = message;
+              this.pushResult({ result: true, actual: actual, expected: expected, message: message });
+          }
+          else {
+              var difference = targets - matchFailures;
+              // there were failures when matching.
+              if (!message) {
+                  message = singleElement
+                      ? "The element " + selectedByPart + " did not also match the selector " + compareSelector + "."
+                      : matchFailures + " out of " + targets + " elements selected by " + this.target + " did not also match the selector " + compareSelector + ".";
+              }
+              actual = singleElement ? message : difference + " elements matched " + compareSelector + ".";
+              expected = singleElement
+                  ? "The element should have matched " + compareSelector + "."
+                  : targets + " elements should have matched " + compareSelector + ".";
+              this.pushResult({ result: false, actual: actual, expected: expected, message: message });
+          }
+          return this;
+      };
+      /**
+       * Assert that the target selector selects only Elements that are not also selected by
+       * compareSelector.
+       *
+       * @param {string} compareSelector
+       * @param {string?} message
+       *
+       * @example
+       * assert.dom('input').doesNotMatchSelector('input[disabled]')
+       */
+      DOMAssertions.prototype.doesNotMatchSelector = function (compareSelector, message) {
+          var targetElements = this.target instanceof Element ? [this.target] : this.findElements();
+          var targets = targetElements.length;
+          var matchFailures = matchesSelector(targetElements, compareSelector);
+          var singleElement = targets === 1;
+          var selectedByPart = this.target instanceof Element ? 'passed' : "selected by " + this.target;
+          var actual;
+          var expected;
+          if (matchFailures === targets) {
+              // the assertion is successful because no element matched the other selector.
+              if (!message) {
+                  message = singleElement
+                      ? "The element " + selectedByPart + " did not also match the selector " + compareSelector + "."
+                      : targets + " elements, selected by " + this.target + ", did not also match the selector " + compareSelector + ".";
+              }
+              actual = expected = message;
+              this.pushResult({ result: true, actual: actual, expected: expected, message: message });
+          }
+          else {
+              var difference = targets - matchFailures;
+              // the assertion fails because at least one element matched the other selector.
+              if (!message) {
+                  message = singleElement
+                      ? "The element " + selectedByPart + " must not also match the selector " + compareSelector + "."
+                      : difference + " elements out of " + targets + ", selected by " + this.target + ", must not also match the selector " + compareSelector + ".";
+              }
+              actual = singleElement
+                  ? "The element " + selectedByPart + " matched " + compareSelector + "."
+                  : matchFailures + " elements did not match " + compareSelector + ".";
+              expected = singleElement
+                  ? message
+                  : targets + " elements should not have matched " + compareSelector + ".";
+              this.pushResult({ result: false, actual: actual, expected: expected, message: message });
+          }
+          return this;
+      };
+      /**
+       * Assert that the tagName of the {@link HTMLElement} or an {@link HTMLElement}
+       * matching the `selector` matches the `expected` tagName, using the
+       * [`tagName`](https://developer.mozilla.org/en-US/docs/Web/API/Element/tagName)
+       * property of the {@link HTMLElement}.
+       *
+       * @param {string} expected
+       * @param {string?} message
+       *
+       * @example
+       * // <h1 id="title">
+       * //   Title
+       * // </h1>
+       *
+       * assert.dom('#title').hasTagName('h1');
+       */
+      DOMAssertions.prototype.hasTagName = function (tagName, message) {
+          var element = this.findTargetElement();
+          var actual;
+          var expected;
+          if (!element)
+              return this;
+          if (typeof tagName !== 'string') {
+              throw new TypeError("You must pass a string to \"hasTagName\". You passed " + tagName + ".");
+          }
+          actual = element.tagName.toLowerCase();
+          expected = tagName.toLowerCase();
+          if (actual === expected) {
+              if (!message) {
+                  message = "Element " + this.targetDescription + " has tagName " + expected;
+              }
+              this.pushResult({ result: true, actual: actual, expected: expected, message: message });
+          }
+          else {
+              if (!message) {
+                  message = "Element " + this.targetDescription + " does not have tagName " + expected;
+              }
+              this.pushResult({ result: false, actual: actual, expected: expected, message: message });
+          }
+          return this;
+      };
+      /**
+       * Assert that the tagName of the {@link HTMLElement} or an {@link HTMLElement}
+       * matching the `selector` does not match the `expected` tagName, using the
+       * [`tagName`](https://developer.mozilla.org/en-US/docs/Web/API/Element/tagName)
+       * property of the {@link HTMLElement}.
+       *
+       * @param {string} expected
+       * @param {string?} message
+       *
+       * @example
+       * // <section id="block">
+       * //   Title
+       * // </section>
+       *
+       * assert.dom('section#block').doesNotHaveTagName('div');
+       */
+      DOMAssertions.prototype.doesNotHaveTagName = function (tagName, message) {
+          var element = this.findTargetElement();
+          var actual;
+          var expected;
+          if (!element)
+              return this;
+          if (typeof tagName !== 'string') {
+              throw new TypeError("You must pass a string to \"doesNotHaveTagName\". You passed " + tagName + ".");
+          }
+          actual = element.tagName.toLowerCase();
+          expected = tagName.toLowerCase();
+          if (actual !== expected) {
+              if (!message) {
+                  message = "Element " + this.targetDescription + " does not have tagName " + expected;
+              }
+              this.pushResult({ result: true, actual: actual, expected: expected, message: message });
+          }
+          else {
+              if (!message) {
+                  message = "Element " + this.targetDescription + " has tagName " + expected;
+              }
+              this.pushResult({ result: false, actual: actual, expected: expected, message: message });
+          }
+          return this;
+      };
+      /**
+       * @private
+       */
+      DOMAssertions.prototype.pushResult = function (result) {
+          this.testContext.pushResult(result);
+      };
+      /**
+       * Finds a valid HTMLElement from target, or pushes a failing assertion if a valid
+       * element is not found.
+       * @private
+       * @returns (HTMLElement|null) a valid HTMLElement, or null
+       */
+      DOMAssertions.prototype.findTargetElement = function () {
+          var el = this.findElement();
+          if (el === null) {
+              var message = "Element " + (this.target || '<unknown>') + " should exist";
+              this.pushResult({ message: message, result: false, actual: undefined, expected: undefined });
+              return null;
+          }
+          return el;
+      };
+      /**
+       * Finds a valid HTMLElement from target
+       * @private
+       * @returns (HTMLElement|null) a valid HTMLElement, or null
+       * @throws TypeError will be thrown if target is an unrecognized type
+       */
+      DOMAssertions.prototype.findElement = function () {
+          if (this.target === null) {
+              return null;
+          }
+          else if (typeof this.target === 'string') {
+              return this.rootElement.querySelector(this.target);
+          }
+          else if (this.target instanceof Element) {
+              return this.target;
+          }
+          else {
+              throw new TypeError("Unexpected Parameter: " + this.target);
+          }
+      };
+      /**
+       * Finds a collection of Element instances from target using querySelectorAll
+       * @private
+       * @returns (Element[]) an array of Element instances
+       * @throws TypeError will be thrown if target is an unrecognized type
+       */
+      DOMAssertions.prototype.findElements = function () {
+          if (this.target === null) {
+              return [];
+          }
+          else if (typeof this.target === 'string') {
+              return toArray(this.rootElement.querySelectorAll(this.target));
+          }
+          else if (this.target instanceof Element) {
+              return [this.target];
+          }
+          else {
+              throw new TypeError("Unexpected Parameter: " + this.target);
+          }
+      };
+      Object.defineProperty(DOMAssertions.prototype, "targetDescription", {
+          /**
+           * @private
+           */
+          get: function () {
+              return elementToString(this.target);
+          },
+          enumerable: false,
+          configurable: true
+      });
+      return DOMAssertions;
+  }());
 
-define('qunit-dom', [], function() {
-  return {};
-});
+  var _getRootElement = function () { return null; };
+  function overrideRootElement(fn) {
+      _getRootElement = fn;
+  }
+  function getRootElement() {
+      return _getRootElement();
+  }
+
+  function install (assert) {
+      assert.dom = function (target, rootElement) {
+          if (!isValidRootElement(rootElement)) {
+              throw new Error(rootElement + " is not a valid root element");
+          }
+          rootElement = rootElement || this.dom.rootElement || getRootElement();
+          if (arguments.length === 0) {
+              target = rootElement instanceof Element ? rootElement : null;
+          }
+          return new DOMAssertions(target, rootElement, this);
+      };
+      function isValidRootElement(element) {
+          return (!element ||
+              (typeof element === 'object' &&
+                  typeof element.querySelector === 'function' &&
+                  typeof element.querySelectorAll === 'function'));
+      }
+  }
+
+  function setup(assert, options) {
+      if (options === void 0) { options = {}; }
+      install(assert);
+      var getRootElement = typeof options.getRootElement === 'function'
+          ? options.getRootElement
+          : function () { return document.querySelector('#ember-testing'); };
+      overrideRootElement(getRootElement);
+  }
+
+  /* global QUnit */
+  install(QUnit.assert);
+
+  exports.setup = setup;
+
+  Object.defineProperty(exports, '__esModule', { value: true });
+
+  return exports;
+
+}({}));
 
 Object.defineProperty(QUnit.assert.dom, 'rootElement', {
   get: function() {
@@ -9053,16 +9831,17 @@ define('@ember/test-helpers/dom/click', ['exports', '@ember/test-helpers/dom/-ge
   /**
     @private
     @param {Element} element the element to click on
+    @param {Object} options the options to be merged into the mouse events
   */
-  function __click__(element) {
-    (0, _fireEvent.default)(element, 'mousedown');
+  function __click__(element, options) {
+    (0, _fireEvent.default)(element, 'mousedown', options);
 
     if ((0, _isFocusable.default)(element)) {
       (0, _focus.__focus__)(element);
     }
 
-    (0, _fireEvent.default)(element, 'mouseup');
-    (0, _fireEvent.default)(element, 'click');
+    (0, _fireEvent.default)(element, 'mouseup', options);
+    (0, _fireEvent.default)(element, 'click', options);
   }
 
   /**
@@ -9089,11 +9868,14 @@ define('@ember/test-helpers/dom/click', ['exports', '@ember/test-helpers/dom/-ge
     The exact listing of events that are triggered may change over time as needed
     to continue to emulate how actual browsers handle clicking a given element.
   
+    Use the `options` hash to change the parameters of the MouseEvents. 
+  
     @public
     @param {string|Element} target the element or selector to click on
+    @param {Object} options the options to be merged into the mouse events
     @return {Promise<void>} resolves when settled
   */
-  function click(target) {
+  function click(target, options = {}) {
     return (0, _utils.nextTickPromise)().then(() => {
       if (!target) {
         throw new Error('Must pass an element or selector to `click`.');
@@ -9107,9 +9889,94 @@ define('@ember/test-helpers/dom/click', ['exports', '@ember/test-helpers/dom/-ge
       let isDisabledFormControl = (0, _isFormControl.default)(element) && element.disabled === true;
 
       if (!isDisabledFormControl) {
-        __click__(element);
+        __click__(element, options);
       }
 
+      return (0, _settled.default)();
+    });
+  }
+});
+define('@ember/test-helpers/dom/double-click', ['exports', '@ember/test-helpers/dom/-get-element', '@ember/test-helpers/dom/fire-event', '@ember/test-helpers/dom/focus', '@ember/test-helpers/settled', '@ember/test-helpers/dom/-is-focusable', '@ember/test-helpers/-utils'], function (exports, _getElement, _fireEvent, _focus, _settled, _isFocusable, _utils) {
+  'use strict';
+
+  Object.defineProperty(exports, "__esModule", {
+    value: true
+  });
+  exports.__doubleClick__ = __doubleClick__;
+  exports.default = doubleClick;
+
+
+  /**
+    @private
+    @param {Element} element the element to double-click on
+    @param {Object} options the options to be merged into the mouse events
+  */
+  function __doubleClick__(element, options) {
+    (0, _fireEvent.default)(element, 'mousedown', options);
+
+    if ((0, _isFocusable.default)(element)) {
+      (0, _focus.__focus__)(element);
+    }
+
+    (0, _fireEvent.default)(element, 'mouseup', options);
+    (0, _fireEvent.default)(element, 'click', options);
+    (0, _fireEvent.default)(element, 'mousedown', options);
+    (0, _fireEvent.default)(element, 'mouseup', options);
+    (0, _fireEvent.default)(element, 'click', options);
+    (0, _fireEvent.default)(element, 'dblclick', options);
+  }
+
+  /**
+    Double-clicks on the specified target.
+  
+    Sends a number of events intending to simulate a "real" user clicking on an
+    element.
+  
+    For non-focusable elements the following events are triggered (in order):
+  
+    - `mousedown`
+    - `mouseup`
+    - `click`
+    - `mousedown`
+    - `mouseup`
+    - `click`
+    - `dblclick`
+  
+    For focusable (e.g. form control) elements the following events are triggered
+    (in order):
+  
+    - `mousedown`
+    - `focus`
+    - `focusin`
+    - `mouseup`
+    - `click`
+    - `mousedown`
+    - `mouseup`
+    - `click`
+    - `dblclick`
+  
+    The exact listing of events that are triggered may change over time as needed
+    to continue to emulate how actual browsers handle clicking a given element.
+  
+    Use the `options` hash to change the parameters of the MouseEvents. 
+  
+    @public
+    @param {string|Element} target the element or selector to double-click on
+    @param {Object} options the options to be merged into the mouse events
+    @return {Promise<void>} resolves when settled
+  */
+  function doubleClick(target, options = {}) {
+    return (0, _utils.nextTickPromise)().then(() => {
+      if (!target) {
+        throw new Error('Must pass an element or selector to `doubleClick`.');
+      }
+
+      let element = (0, _getElement.default)(target);
+      if (!element) {
+        throw new Error(`Element not found when calling \`doubleClick('${target}')\`.`);
+      }
+
+      __doubleClick__(element, options);
       return (0, _settled.default)();
     });
   }
@@ -9234,6 +10101,15 @@ define('@ember/test-helpers/dom/fire-event', ['exports'], function (exports) {
   exports.default = fireEvent;
 
 
+  // eslint-disable-next-line require-jsdoc
+  const MOUSE_EVENT_CONSTRUCTOR = (() => {
+    try {
+      new MouseEvent('test');
+      return true;
+    } catch (e) {
+      return false;
+    }
+  })();
   const DEFAULT_EVENT_OPTIONS = { bubbles: true, cancelable: true };
   const KEYBOARD_EVENT_TYPES = exports.KEYBOARD_EVENT_TYPES = Object.freeze(['keydown', 'keypress', 'keyup']);
   const MOUSE_EVENT_TYPES = ['click', 'mousedown', 'mouseup', 'dblclick', 'mouseenter', 'mouseleave', 'mousemove', 'mouseout', 'mouseover'];
@@ -9277,7 +10153,7 @@ define('@ember/test-helpers/dom/fire-event', ['exports'], function (exports) {
         clientY: y
       };
 
-      event = buildMouseEvent(eventType, Ember.merge(simulatedCoordinates, options));
+      event = buildMouseEvent(eventType, Ember.assign(simulatedCoordinates, options));
     } else if (FILE_SELECTION_EVENT_TYPES.indexOf(eventType) > -1 && element.files) {
       event = buildFileEvent(eventType, element, options);
     } else {
@@ -9301,26 +10177,31 @@ define('@ember/test-helpers/dom/fire-event', ['exports'], function (exports) {
     // bubbles and cancelable are readonly, so they can be
     // set when initializing event
     event.initEvent(type, bubbles, cancelable);
-    Ember.merge(event, options);
+    Ember.assign(event, options);
     return event;
   }
 
   // eslint-disable-next-line require-jsdoc
   function buildMouseEvent(type, options = {}) {
     let event;
-    try {
-      event = document.createEvent('MouseEvents');
-      let eventOpts = Ember.merge(Ember.merge({}, DEFAULT_EVENT_OPTIONS), options);
-      event.initMouseEvent(type, eventOpts.bubbles, eventOpts.cancelable, window, eventOpts.detail, eventOpts.screenX, eventOpts.screenY, eventOpts.clientX, eventOpts.clientY, eventOpts.ctrlKey, eventOpts.altKey, eventOpts.shiftKey, eventOpts.metaKey, eventOpts.button, eventOpts.relatedTarget);
-    } catch (e) {
-      event = buildBasicEvent(type, options);
+    let eventOpts = Ember.assign({ view: window }, DEFAULT_EVENT_OPTIONS, options);
+    if (MOUSE_EVENT_CONSTRUCTOR) {
+      event = new MouseEvent(type, eventOpts);
+    } else {
+      try {
+        event = document.createEvent('MouseEvents');
+        event.initMouseEvent(type, eventOpts.bubbles, eventOpts.cancelable, window, eventOpts.detail, eventOpts.screenX, eventOpts.screenY, eventOpts.clientX, eventOpts.clientY, eventOpts.ctrlKey, eventOpts.altKey, eventOpts.shiftKey, eventOpts.metaKey, eventOpts.button, eventOpts.relatedTarget);
+      } catch (e) {
+        event = buildBasicEvent(type, options);
+      }
     }
+
     return event;
   }
 
   // eslint-disable-next-line require-jsdoc
   function buildKeyboardEvent(type, options = {}) {
-    let eventOpts = Ember.merge(Ember.merge({}, DEFAULT_EVENT_OPTIONS), options);
+    let eventOpts = Ember.assign({}, DEFAULT_EVENT_OPTIONS, options);
     let event, eventMethodName;
 
     try {
@@ -9494,18 +10375,22 @@ define('@ember/test-helpers/dom/get-root-element', ['exports', '@ember/test-help
       throw new Error('Must setup rendering context before attempting to interact with elements.');
     }
 
-    let rootElementSelector;
+    let rootElement;
     // When the host app uses `setApplication` (instead of `setResolver`) the owner has
-    // a `rootElement` set on it with the element id to be used
+    // a `rootElement` set on it with the element or id to be used
     if (owner && owner._emberTestHelpersMockOwner === undefined) {
-      rootElementSelector = owner.rootElement;
+      rootElement = owner.rootElement;
     } else {
-      rootElementSelector = '#ember-testing';
+      rootElement = '#ember-testing';
     }
 
-    let rootElement = document.querySelector(rootElementSelector);
-
-    return rootElement;
+    if (rootElement.nodeType === Node.ELEMENT_NODE || rootElement.nodeType === Node.DOCUMENT_NODE || rootElement instanceof Window) {
+      return rootElement;
+    } else if (typeof rootElement === 'string') {
+      return document.querySelector(rootElement);
+    } else {
+      throw new Error('Application.rootElement must be an element or a selector string');
+    }
   }
 });
 define('@ember/test-helpers/dom/tap', ['exports', '@ember/test-helpers/dom/-get-element', '@ember/test-helpers/dom/fire-event', '@ember/test-helpers/dom/click', '@ember/test-helpers/settled', '@ember/test-helpers/-utils'], function (exports, _getElement, _fireEvent, _click, _settled, _utils) {
@@ -9545,9 +10430,11 @@ define('@ember/test-helpers/dom/tap', ['exports', '@ember/test-helpers/dom/-get-
     The exact listing of events that are triggered may change over time as needed
     to continue to emulate how actual browsers handle tapping on a given element.
   
+    Use the `options` hash to change the parameters of the tap events. 
+  
     @public
     @param {string|Element} target the element or selector to tap on
-    @param {Object} options the options to be provided to the touch events
+    @param {Object} options the options to be merged into the touch events
     @return {Promise<void>} resolves when settled
   */
   function tap(target, options = {}) {
@@ -9565,7 +10452,7 @@ define('@ember/test-helpers/dom/tap', ['exports', '@ember/test-helpers/dom/-get-
       let touchendEv = (0, _fireEvent.default)(element, 'touchend', options);
 
       if (!touchstartEv.defaultPrevented && !touchendEv.defaultPrevented) {
-        (0, _click.__click__)(element);
+        (0, _click.__click__)(element, options);
       }
 
       return (0, _settled.default)();
@@ -9582,14 +10469,25 @@ define('@ember/test-helpers/dom/trigger-event', ['exports', '@ember/test-helpers
 
 
   /**
-    Triggers an event on the specified target.
-  
-    @public
-    @param {string|Element} target the element or selector to trigger the event on
-    @param {string} eventType the type of event to trigger
-    @param {Object} options additional properties to be set on the event
-    @return {Promise<void>} resolves when the application is settled
-  */
+   * Triggers an event on the specified target.
+   *
+   * @public
+   * @param {string|Element} target the element or selector to trigger the event on
+   * @param {string} eventType the type of event to trigger
+   * @param {Object} options additional properties to be set on the event
+   * @return {Promise<void>} resolves when the application is settled
+   *
+   * @example
+   * <caption>Using triggerEvent to Upload a file
+   * When using triggerEvent to upload a file the `eventType` must be `change` and  you must pass an
+   * array of [Blob](https://developer.mozilla.org/en-US/docs/Web/API/Blob) as `options`.</caption>
+   *
+   * triggerEvent(
+   *   'input.fileUpload',
+   *   'change',
+   *   [new Blob(['Ember Rules!'])]
+   * );
+   */
   function triggerEvent(target, eventType, options) {
     return (0, _utils.nextTickPromise)().then(() => {
       if (!target) {
@@ -9642,6 +10540,16 @@ define('@ember/test-helpers/dom/trigger-key-event', ['exports', '@ember/test-hel
     38: 'ArrowUp',
     39: 'ArrowRight',
     40: 'ArrowDown',
+    48: '0',
+    49: '1',
+    50: '2',
+    51: '3',
+    52: '4',
+    53: '5',
+    54: '6',
+    55: '7',
+    56: '8',
+    57: '9',
     65: 'a',
     66: 'b',
     67: 'c',
@@ -9756,7 +10664,7 @@ define('@ember/test-helpers/dom/trigger-key-event', ['exports', '@ember/test-hel
           throw new Error(`Must provide a \`key\` to \`triggerKeyEvent\` that starts with an uppercase character but you passed \`${key}\`.`);
         }
 
-        if ((0, _utils.isNumeric)(key)) {
+        if ((0, _utils.isNumeric)(key) && key.length > 1) {
           throw new Error(`Must provide a numeric \`keyCode\` to \`triggerKeyEvent\` but you passed \`${key}\` as a string.`);
         }
 
@@ -9766,12 +10674,103 @@ define('@ember/test-helpers/dom/trigger-key-event', ['exports', '@ember/test-hel
         throw new Error(`Must provide a \`key\` or \`keyCode\` to \`triggerKeyEvent\``);
       }
 
-      let options = Ember.merge(props, modifiers);
+      let options = Ember.assign(props, modifiers);
 
       (0, _fireEvent.default)(element, eventType, options);
 
       return (0, _settled.default)();
     });
+  }
+});
+define('@ember/test-helpers/dom/type-in', ['exports', '@ember/test-helpers/-utils', '@ember/test-helpers/settled', '@ember/test-helpers/dom/-get-element', '@ember/test-helpers/dom/-is-form-control', '@ember/test-helpers/dom/focus', '@ember/test-helpers/dom/fire-event'], function (exports, _utils, _settled, _getElement, _isFormControl, _focus, _fireEvent) {
+  'use strict';
+
+  Object.defineProperty(exports, "__esModule", {
+    value: true
+  });
+  exports.default = typeIn;
+
+
+  /**
+   * Mimics character by character entry into the target `input` or `textarea` element.
+   *
+   * Allows for simulation of slow entry by passing an optional millisecond delay
+   * between key events.
+  
+   * The major difference between `typeIn` and `fillIn` is that `typeIn` triggers
+   * keyboard events as well as `input` and `change`.
+   * Typically this looks like `focus` -> `focusin` -> `keydown` -> `keypress` -> `keyup` -> `input` -> `change`
+   * per character of the passed text (this may vary on some browsers).
+   *
+   * @public
+   * @param {string|Element} target the element or selector to enter text into
+   * @param {string} text the test to fill the element with
+   * @param {Object} options {delay: x} (default 50) number of milliseconds to wait per keypress
+   * @return {Promise<void>} resolves when the application is settled
+   */
+  function typeIn(target, text, options = { delay: 50 }) {
+    return (0, _utils.nextTickPromise)().then(() => {
+      if (!target) {
+        throw new Error('Must pass an element or selector to `typeIn`.');
+      }
+
+      const element = (0, _getElement.default)(target);
+      if (!element) {
+        throw new Error(`Element not found when calling \`typeIn('${target}')\``);
+      }
+      let isControl = (0, _isFormControl.default)(element);
+      if (!isControl) {
+        throw new Error('`typeIn` is only usable on form controls.');
+      }
+
+      if (typeof text === 'undefined' || text === null) {
+        throw new Error('Must provide `text` when calling `typeIn`.');
+      }
+
+      (0, _focus.__focus__)(element);
+
+      return fillOut(element, text, options.delay).then(() => (0, _fireEvent.default)(element, 'change')).then(_settled.default);
+    });
+  }
+
+  // eslint-disable-next-line require-jsdoc
+  function fillOut(element, text, delay) {
+    const inputFunctions = text.split('').map(character => keyEntry(element, character, delay));
+    return inputFunctions.reduce((currentPromise, func) => {
+      return currentPromise.then(() => delayedExecute(func, delay));
+    }, Ember.RSVP.Promise.resolve());
+  }
+
+  // eslint-disable-next-line require-jsdoc
+  function keyEntry(element, character) {
+    const charCode = character.charCodeAt();
+
+    const eventOptions = {
+      bubbles: true,
+      cancellable: true,
+      charCode
+    };
+
+    const keyEvents = {
+      down: new KeyboardEvent('keydown', eventOptions),
+      press: new KeyboardEvent('keypress', eventOptions),
+      up: new KeyboardEvent('keyup', eventOptions)
+    };
+
+    return function () {
+      element.dispatchEvent(keyEvents.down);
+      element.dispatchEvent(keyEvents.press);
+      element.value = element.value + character;
+      (0, _fireEvent.default)(element, 'input');
+      element.dispatchEvent(keyEvents.up);
+    };
+  }
+
+  // eslint-disable-next-line require-jsdoc
+  function delayedExecute(func, delay) {
+    return new Ember.RSVP.Promise(resolve => {
+      setTimeout(resolve, delay);
+    }).then(func);
   }
 });
 define('@ember/test-helpers/dom/wait-for', ['exports', '@ember/test-helpers/wait-until', '@ember/test-helpers/dom/-get-element', '@ember/test-helpers/dom/-get-elements', '@ember/test-helpers/dom/-to-array', '@ember/test-helpers/-utils'], function (exports, _waitUntil, _getElement, _getElements, _toArray, _utils) {
@@ -9792,12 +10791,15 @@ define('@ember/test-helpers/dom/wait-for', ['exports', '@ember/test-helpers/wait
     @param {Object} [options] the options to be used
     @param {number} [options.timeout=1000] the time to wait (in ms) for a match
     @param {number} [options.count=null] the number of elements that should match the provided selector (null means one or more)
-    @returns {Element|Array<Element>} the element (or array of elements) that were being waited upon
+    @return {Promise<Element|Element[]>} resolves when the element(s) appear on the page
   */
-  function waitFor(selector, { timeout = 1000, count = null, timeoutMessage = 'waitFor timed out' } = {}) {
+  function waitFor(selector, { timeout = 1000, count = null, timeoutMessage } = {}) {
     return (0, _utils.nextTickPromise)().then(() => {
       if (!selector) {
         throw new Error('Must pass a selector to `waitFor`.');
+      }
+      if (!timeoutMessage) {
+        timeoutMessage = `waitFor timed out waiting for selector "${selector}"`;
       }
 
       let callback;
@@ -9859,7 +10861,7 @@ define('@ember/test-helpers/has-ember-version', ['exports'], function (exports) 
     return actualMajor > major || actualMajor === major && actualMinor >= minor;
   }
 });
-define('@ember/test-helpers/index', ['exports', '@ember/test-helpers/resolver', '@ember/test-helpers/application', '@ember/test-helpers/setup-context', '@ember/test-helpers/teardown-context', '@ember/test-helpers/setup-rendering-context', '@ember/test-helpers/teardown-rendering-context', '@ember/test-helpers/setup-application-context', '@ember/test-helpers/teardown-application-context', '@ember/test-helpers/settled', '@ember/test-helpers/wait-until', '@ember/test-helpers/validate-error-handler', '@ember/test-helpers/dom/click', '@ember/test-helpers/dom/tap', '@ember/test-helpers/dom/focus', '@ember/test-helpers/dom/blur', '@ember/test-helpers/dom/trigger-event', '@ember/test-helpers/dom/trigger-key-event', '@ember/test-helpers/dom/fill-in', '@ember/test-helpers/dom/wait-for', '@ember/test-helpers/dom/get-root-element', '@ember/test-helpers/dom/find', '@ember/test-helpers/dom/find-all'], function (exports, _resolver, _application, _setupContext, _teardownContext, _setupRenderingContext, _teardownRenderingContext, _setupApplicationContext, _teardownApplicationContext, _settled, _waitUntil, _validateErrorHandler, _click, _tap, _focus, _blur, _triggerEvent, _triggerKeyEvent, _fillIn, _waitFor, _getRootElement, _find, _findAll) {
+define('@ember/test-helpers/index', ['exports', '@ember/test-helpers/resolver', '@ember/test-helpers/application', '@ember/test-helpers/setup-context', '@ember/test-helpers/teardown-context', '@ember/test-helpers/setup-rendering-context', '@ember/test-helpers/teardown-rendering-context', '@ember/test-helpers/setup-application-context', '@ember/test-helpers/teardown-application-context', '@ember/test-helpers/settled', '@ember/test-helpers/wait-until', '@ember/test-helpers/validate-error-handler', '@ember/test-helpers/dom/click', '@ember/test-helpers/dom/double-click', '@ember/test-helpers/dom/tap', '@ember/test-helpers/dom/focus', '@ember/test-helpers/dom/blur', '@ember/test-helpers/dom/trigger-event', '@ember/test-helpers/dom/trigger-key-event', '@ember/test-helpers/dom/fill-in', '@ember/test-helpers/dom/wait-for', '@ember/test-helpers/dom/get-root-element', '@ember/test-helpers/dom/find', '@ember/test-helpers/dom/find-all', '@ember/test-helpers/dom/type-in'], function (exports, _resolver, _application, _setupContext, _teardownContext, _setupRenderingContext, _teardownRenderingContext, _setupApplicationContext, _teardownApplicationContext, _settled, _waitUntil, _validateErrorHandler, _click, _doubleClick, _tap, _focus, _blur, _triggerEvent, _triggerKeyEvent, _fillIn, _waitFor, _getRootElement, _find, _findAll, _typeIn) {
   'use strict';
 
   Object.defineProperty(exports, "__esModule", {
@@ -10021,6 +11023,12 @@ define('@ember/test-helpers/index', ['exports', '@ember/test-helpers/resolver', 
       return _click.default;
     }
   });
+  Object.defineProperty(exports, 'doubleClick', {
+    enumerable: true,
+    get: function () {
+      return _doubleClick.default;
+    }
+  });
   Object.defineProperty(exports, 'tap', {
     enumerable: true,
     get: function () {
@@ -10079,6 +11087,12 @@ define('@ember/test-helpers/index', ['exports', '@ember/test-helpers/resolver', 
     enumerable: true,
     get: function () {
       return _findAll.default;
+    }
+  });
+  Object.defineProperty(exports, 'typeIn', {
+    enumerable: true,
+    get: function () {
+      return _typeIn.default;
     }
   });
 });
@@ -10201,6 +11215,13 @@ define('@ember/test-helpers/settled', ['exports', '@ember/test-helpers/-utils', 
     @private
   */
   function _teardownAJAXHooks() {
+    // jQuery will not invoke `ajaxComplete` if
+    //    1. `transport.send` throws synchronously and
+    //    2. it has an `error` option which also throws synchronously
+
+    // We can no longer handle any remaining requests
+    requests = [];
+
     if (!Ember.$) {
       return;
     }
@@ -10253,18 +11274,18 @@ define('@ember/test-helpers/settled', ['exports', '@ember/test-helpers/-utils', 
   /**
     Check various settledness metrics, and return an object with the following properties:
   
-    * `hasRunLoop` - Checks if a run-loop has been started. If it has, this will
+    - `hasRunLoop` - Checks if a run-loop has been started. If it has, this will
       be `true` otherwise it will be `false`.
-    * `hasPendingTimers` - Checks if there are scheduled timers in the run-loop.
+    - `hasPendingTimers` - Checks if there are scheduled timers in the run-loop.
       These pending timers are primarily registered by `Ember.run.schedule`. If
       there are pending timers, this will be `true`, otherwise `false`.
-    * `hasPendingWaiters` - Checks if any registered test waiters are still
+    - `hasPendingWaiters` - Checks if any registered test waiters are still
       pending (e.g. the waiter returns `true`). If there are pending waiters,
       this will be `true`, otherwise `false`.
-    * `hasPendingRequests` - Checks if there are pending AJAX requests (based on
+    - `hasPendingRequests` - Checks if there are pending AJAX requests (based on
       `ajaxSend` / `ajaxComplete` events triggered by `jQuery.ajax`). If there
       are pending requests, this will be `true`, otherwise `false`.
-    * `pendingRequestCount` - The count of pending AJAX requests.
+    - `pendingRequestCount` - The count of pending AJAX requests.
   
     @public
     @returns {Object} object with properties for each of the metrics used to determine settledness
@@ -10349,7 +11370,6 @@ define('@ember/test-helpers/setup-application-context', ['exports', '@ember/test
     @public
     @returns {string} the currently active route name
   */
-  /* globals EmberENV */
   function currentRouteName() {
     let { owner } = (0, _setupContext.getContext)();
     let router = owner.lookup('router:main');
@@ -10377,8 +11397,8 @@ define('@ember/test-helpers/setup-application-context', ['exports', '@ember/test
     Used by test framework addons to setup the provided context for working with
     an application (e.g. routing).
   
-    `setupContext` must have been ran on the provided context prior to calling
-    `setupApplicatinContext`.
+    `setupContext` must have been run on the provided context prior to calling
+    `setupApplicationContext`.
   
     Sets up the basic framework used by application tests.
   
@@ -10637,17 +11657,18 @@ define('@ember/test-helpers/setup-rendering-context', ['exports', '@ember/test-h
   exports.render = render;
   exports.clearRender = clearRender;
   exports.default = setupRenderingContext;
-  /* globals EmberENV */
   const RENDERING_CLEANUP = exports.RENDERING_CLEANUP = Object.create(null);
   const OUTLET_TEMPLATE = Ember.HTMLBars.template({
-    "id": "em3WhaQV",
-    "block": "{\"symbols\":[],\"statements\":[[1,[21,\"outlet\"],false]],\"hasEval\":false}",
-    "meta": {}
+    "id": "CtJTcOby",
+    "block": "[[[46,[28,[37,1],null,null],null,null,null]],[],false,[\"component\",\"-outlet\"]]",
+    "moduleName": "(unknown template module)",
+    "isStrictMode": false
   });
   const EMPTY_TEMPLATE = Ember.HTMLBars.template({
-    "id": "xOcW61lH",
-    "block": "{\"symbols\":[],\"statements\":[],\"hasEval\":false}",
-    "meta": {}
+    "id": "BD59E4Lo",
+    "block": "[[],[],false,[]]",
+    "moduleName": "(unknown template module)",
+    "isStrictMode": false
   });
 
   /**
@@ -11542,21 +12563,6 @@ define('ember-qunit/index', ['exports', 'ember-qunit/legacy-2-x/module-for', 'em
     _qunit.default.done(_testIsolationValidation.reportIfTestNotIsolated);
   }
 
-  // This polyfills the changes from https://github.com/qunitjs/qunit/pull/1279
-  // and should be removed when that change is released and included in a release
-  // version of QUnit
-  function polyfillMemoryLeakPrevention() {
-    _qunit.default.testDone(function () {
-      // release the test callback
-      _qunit.default.config.current.callback = undefined;
-    });
-
-    _qunit.default.moduleDone(function () {
-      // release the module hooks
-      _qunit.default.config.current.module.hooks = {};
-    });
-  }
-
   /**
      @method start
      @param {Object} [options] Options to be used for enabling/disabling behaviors
@@ -11574,7 +12580,6 @@ define('ember-qunit/index', ['exports', 'ember-qunit/legacy-2-x/module-for', 'em
      of `Ember.onerror` will be disabled.
      @param {Boolean} [options.setupTestIsolationValidation] If `false` test isolation validation
      will be disabled.
-     @param {Boolean} [options._polyfillMemoryLeakPrevention] If `false` the polyfilled memory leak prevention will not be enabled.
    */
   function start(options = {}) {
     if (options.loadTests !== false) {
@@ -11599,10 +12604,6 @@ define('ember-qunit/index', ['exports', 'ember-qunit/legacy-2-x/module-for', 'em
 
     if (typeof options.setupTestIsolationValidation !== 'undefined' && options.setupTestIsolationValidation !== false) {
       setupTestIsolationValidation();
-    }
-
-    if (options._polyfillMemoryLeakPrevention !== false) {
-      polyfillMemoryLeakPrevention();
     }
 
     if (options.startTests !== false) {
@@ -11796,8 +12797,19 @@ define('ember-qunit/test-loader', ['exports', 'qunit', 'ember-cli-test-loader/te
   let moduleLoadFailures = [];
 
   _qunit.default.done(function () {
-    if (moduleLoadFailures.length) {
-      throw new Error('\n' + moduleLoadFailures.join('\n'));
+    let length = moduleLoadFailures.length;
+
+    try {
+      if (length === 0) {
+        // do nothing
+      } else if (length === 1) {
+        throw moduleLoadFailures[0];
+      } else {
+        throw new Error('\n' + moduleLoadFailures.join('\n'));
+      }
+    } finally {
+      // ensure we release previously captured errors.
+      moduleLoadFailures = [];
     }
   });
 
@@ -11986,13 +12998,6 @@ define('ember-test-helpers/legacy-0-6-x/abstract-test-module', ['exports', 'embe
   Object.defineProperty(exports, "__esModule", {
     value: true
   });
-
-
-  // calling this `merge` here because we cannot
-  // actually assume it is like `Object.assign`
-  // with > 2 args
-  const merge = Ember.assign || Ember.merge;
-
   exports.default = class {
     constructor(name, options) {
       this.context = undefined;
@@ -12104,11 +13109,10 @@ define('ember-test-helpers/legacy-0-6-x/abstract-test-module', ['exports', 'embe
     setupContext(options) {
       let context = this.getContext();
 
-      merge(context, {
+      Ember.assign(context, {
         dispatcher: null,
         inject: {}
-      });
-      merge(context, options);
+      }, options);
 
       this.setToString();
       (0, _testHelpers.setContext)(context);
@@ -12283,8 +13287,6 @@ define('ember-test-helpers/legacy-0-6-x/build-registry', ['exports', 'require'],
     };
   };
 
-  /* globals global, self, requirejs */
-
   function exposeRegistryMethodsWithoutDeprecations(container) {
     var methods = ['register', 'unregister', 'resolve', 'normalize', 'typeInjection', 'injection', 'factoryInjection', 'factoryTypeInjection', 'has', 'options', 'optionsForType'];
 
@@ -12391,7 +13393,8 @@ define('ember-test-helpers/legacy-0-6-x/test-module-for-component', ['exports', 
     value: true
   });
   exports.setupComponentIntegrationTest = setupComponentIntegrationTest;
-  /* globals EmberENV */
+
+
   let ACTION_KEY;
   if ((0, _hasEmberVersion.default)(2, 0)) {
     ACTION_KEY = 'actions';
@@ -12438,7 +13441,7 @@ define('ember-test-helpers/legacy-0-6-x/test-module-for-component', ['exports', 
         this.setupSteps.push(this.setupComponentUnitTest);
       } else {
         this.callbacks.subject = function () {
-          throw new Error("component integration tests do not support `subject()`. Instead, render the component as if it were HTML: `this.render('<my-component foo=true>');`. For more information, read: http://guides.emberjs.com/v2.2.0/testing/testing-components/");
+          throw new Error("component integration tests do not support `subject()`. Instead, render the component as if it were HTML: `this.render('<my-component foo=true>');`. For more information, read: http://guides.emberjs.com/current/testing/testing-components/");
         };
         this.setupSteps.push(this.setupComponentIntegrationTest);
         this.teardownSteps.unshift(this.teardownComponent);
@@ -13124,6 +14127,10 @@ define('ember-test-helpers/wait', ['exports', '@ember/test-helpers/settled', '@e
     }, { timeout: Infinity });
   }
 });
+define('qunit-dom', [], function() {
+  return {};
+});
+
 define("qunit/index", ["exports"], function (exports) {
   "use strict";
 

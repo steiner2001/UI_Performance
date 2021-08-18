@@ -1,23 +1,27 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
+
 <head>
     <title>TodoMVC with WebSharper UI</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" type="text/css" href="http://todomvc.com/examples/vanillajs/node_modules/todomvc-common/base.css" />
-    <link rel="stylesheet" type="text/css" href="http://todomvc.com/examples/vanillajs/node_modules/todomvc-app-css/index.css" />
+    <link rel="stylesheet" type="text/css" href="https://todomvc.com/examples/vanillajs/node_modules/todomvc-common/base.css" />
+    <link rel="stylesheet" type="text/css" href="https://todomvc.com/examples/vanillajs/node_modules/todomvc-app-css/index.css" />
     <style>
         /* Don't show the not-yet-loaded templates */
-        [ws-template], [ws-children-template] {
+        
+        [ws-template],
+        [ws-children-template] {
             display: none;
         }
-
+        
         .hidden {
             display: none;
         }
     </style>
     <script type="text/javascript" src="Content/WebSharper.Mvu.TodoMvc.head.js"></script>
 </head>
+
 <body id="main">
     <section class="todoapp">
         <header class="header">
@@ -61,4 +65,5 @@
     </footer>
     <script type="text/javascript" src="Content/WebSharper.Mvu.TodoMvc.js"></script>
 </body>
+
 </html>
